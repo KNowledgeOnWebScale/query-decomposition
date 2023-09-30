@@ -1,0 +1,1 @@
+- https://communitysolidserver.github.io/configuration-generator/v6/
