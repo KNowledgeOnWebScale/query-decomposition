@@ -1,0 +1,29 @@
+SELECT ?page ?type WHERE
+{
+    ?s foaf:page ?page .
+    { ?s rdfs:label "Microsoft"@en }
+    UNION
+    { ?s rdfs:label "Apple"@en }
+    UNION
+    { ?s rdfs:label "Alphabet"@en }
+}`;
+SELECT ?page ?type WHERE
+{
+{
+    ?s foaf:page ?page .
+	JOIN
+    { ?s rdfs:label "Microsoft"@en }
+}
+UNION
+{
+    ?s foaf:page ?page .
+	JOIN
+    { ?s rdfs:label "Apple"@en }
+}
+UNION    
+{
+    ?s foaf:page ?page .
+	JOIN
+    { ?s rdfs:label "Alphabet"@en }
+}
+}`;

@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "typeRoots": [
+      "./src/types"
+    ],
+    "module": "nodenext",
+    "lib": [
+      "ES2020"
+    ],
+    "noEmit": true,
+    "target": "es2020",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "composite": true,
+    "noErrorTruncation": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "useDefineForClassFields": true,
+    "strictNullChecks": true,
+  },
+  "include": [
+    "src",
+    "package.json"
+  ]
+}

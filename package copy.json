@@ -1,24 +1,21 @@
 {
   "name": "combine-agg-queries",
+  "version": "1.0.0",
+  "keywords": [],
+  "description": "",
   "author": "Thibeau Vercruyssen",
-  "version": "0.1.0",
   "type": "module",
-  "main": "src/index.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node --loader ts-node/esm src/index.ts",
-    "debug": "node --loader ts-node/esm src/index.ts --inspect"
+    "start": "community-solid-server & node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@comunica/query-sparql": "^2.9.0",
     "@comunica/query-sparql-file": "^2.9.0",
     "@comunica/query-sparql-solid": "^2.4.0",
     "@solid/community-server": "^6.0.2",
-    "@types/node": "^20.4.5",
     "solidbench": "^1.7.1",
-    "sparqlalgebrajs": "^4.3.3",
-    "ts-node": "^10.9.1"
-  },
-  "devDependencies": {
-    "typescript": "^5.4.0-dev.20240217"
+    "sparqlalgebrajs": "^4.3.3"
   }
 }
