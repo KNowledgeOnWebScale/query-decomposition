@@ -20,6 +20,7 @@
     "strict": true,
     "useDefineForClassFields": true,
     "strictNullChecks": true,
+    "esModuleInterop": true,
   },
   "include": [
     "src",
