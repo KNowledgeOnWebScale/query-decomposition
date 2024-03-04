@@ -22,8 +22,4 @@
     "strictNullChecks": true,
     "esModuleInterop": true,
   },
-  "include": [
-    "src",
-    "package.json"
-  ]
 }

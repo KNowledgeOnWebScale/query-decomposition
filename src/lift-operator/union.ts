@@ -1,6 +1,9 @@
-import { Algebra, toSparql } from "sparqlalgebrajs";
-import { QueryNode, findFirstOpOfTypeNotRoot, type QueryNodeWithParent } from "../t.js";
 import { strict as assert } from "assert";
+
+import { Algebra, toSparql } from "sparqlalgebrajs";
+
+import { QueryNode, findFirstOpOfTypeNotRoot, type QueryNodeWithParent } from "../t.js";
+
 import { liftBinaryAboveBinary, liftBinaryAboveUnary } from "./lift.js";
 import { replaceChild, type OpWithInput } from "./utils.js";
 

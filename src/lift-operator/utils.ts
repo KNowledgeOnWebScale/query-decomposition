@@ -1,4 +1,5 @@
 import { strict as assert } from "assert";
+
 import type { Algebra } from "sparqlalgebrajs";
 import type { Multi, Single } from "sparqlalgebrajs/lib/algebra.js";
 

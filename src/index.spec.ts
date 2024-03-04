@@ -1,8 +1,9 @@
-import { moveUnionsToTop } from "./lift-operator/union.js";
-import { Algebra, toSparql, translate } from "sparqlalgebrajs";
+import { strict as assert } from "assert";
 
 import { describe, expect, it, test } from "@jest/globals";
-import { strict as assert } from "assert";
+import { Algebra, toSparql, translate } from "sparqlalgebrajs";
+
+import { moveUnionsToTop } from "./lift-operator/union.js";
 
 function checkQueryDecomposition(
     decomposeCb: (query: Algebra.Project) => Algebra.Project,

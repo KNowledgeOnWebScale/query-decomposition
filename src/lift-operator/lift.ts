@@ -1,4 +1,5 @@
 import { strict as assert } from "assert";
+
 import { type Algebra } from "sparqlalgebrajs";
 
 type UnaryOp = Algebra.Operation & Algebra.Single;

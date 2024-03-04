@@ -1,6 +1,8 @@
 import { strict as assert } from "assert";
+
 import Denque from "denque";
 import { Algebra } from "sparqlalgebrajs";
+
 import { type OpWithInput, type WithOpInput } from "./lift-operator/utils.js";
 
 export type QueryNode<V extends Algebra.Operation> = {
