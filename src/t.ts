@@ -1,27 +1,38 @@
 import { strict as assert } from 'assert';
 import Denque from 'denque';
 import { Algebra } from 'sparqlalgebrajs';
+import {type OpWithInput, type WithOpInput} from "./lift-operator/utils.js"
+import type { Multi, Single } from 'sparqlalgebrajs/lib/algebra.js';
 
-export type Node<T extends Algebra.Operation = Algebra.Operation> = {
-    value: T,
-    parent?: Node<Algebra.Operation>,
+// export type QueryNode<V extends Algebra.Operation, HasParent extends boolean | undefined = undefined> = {
+//     value: V,
+//     parent: HasParent extends undefined ? QueryNode<Algebra.Operation> | null: HasParent extends true ? QueryNode<Algebra.Operation> : null,
+// }
+
+export type QueryNode<V extends Algebra.Operation> = {
+    value: V,
+    parent: QueryNode<OpWithInput> | null,
+}
+export type QueryNodeWithParent<T extends Algebra.Operation> = QueryNode<T> & {parent: QueryNode<Algebra.Operation>}
+
+function takesInputs(x: QueryNode<Algebra.Operation>): x is QueryNode<OpWithInput> {
+    return "input" in x.value
 }
 
 // SKIP THE FIRST PROJECT AND ANY OPERATIONS IN SKIP_OPS THAT FOLLOW IT!
 // TEST FOR NESTED UNION
-export function findFirstOpOfType<T extends Algebra.Operation>(opType: T["type"], root: Algebra.Operation): Node<T> | null {
-    const queue = new Denque<Node<Algebra.Operation>>([{ value: root }]);
+export function findFirstOpOfTypeNotRoot<T extends OpWithInput>(opType: T["type"], root: Algebra.Operation): QueryNode<T> | null {
+    const queue = new Denque<QueryNode<Algebra.Operation>>([{value: root, parent: null}]);
 
     while (!queue.isEmpty()) {
-        const v = queue.pop()!;
+        const v = queue.shift()!;
 
-        if (v.value.type == opType) {
-            return v as Node<T>;
+        if (!takesInputs(v)) {
+            continue;
         }
 
-        if (!("input" in v.value)) {
-            // BGP
-            continue;
+        if (v.value.type == opType && v.value !== root) {
+            return v as QueryNode<T>;
         }
 
         if (Array.isArray(v.value.input)) {

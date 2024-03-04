@@ -8,9 +8,12 @@ function checkQueryDecomposition(decomposeCb: (query: Algebra.Project) => Algebr
     let QUERY = translate(input);
     assert(QUERY.type == Algebra.types.PROJECT)
 
-    console.log(toSparql(decomposeCb(structuredClone(QUERY))))
-    console.log("=============================")
-    console.log(toSparql(translate(expected)))
+    const q = decomposeCb(structuredClone(QUERY))
+    assert(q !== null)
+
+    console.log(toSparql(q))
+    //console.log("=============================")
+    //console.log(toSparql(translate(expected)))
     expect(toSparql(decomposeCb(QUERY))).toEqual(toSparql(translate(expected)));
 }
 
@@ -115,14 +118,25 @@ describe("union decomposition", () => {
         PREFIX : <http://example.com>
 
         SELECT * WHERE {
-            { ?s :labelA ?pLabel . ?s :labelC ?label }
+            {SELECT * WHERE { 
+                ?s :labelA ?pLabel ; 
+                   :labelC ?label 
+            }}
             UNION
-            { ?s :labelA ?pLabel . ?s :labelD ?label }
+            {SELECT * WHERE { 
+                ?s :labelA ?pLabel ; 
+                   :labelD ?label 
+            }}
             UNION
-            { ?s :labelB ?pLabel . ?s :labelC ?label }
+            {SELECT * WHERE { 
+                ?s :labelB ?pLabel ; 
+                   :labelC ?label 
+            }}
             UNION
-            { ?s :labelB ?pLabel . ?s :labelD ?label }
-        }
-        `
+            {SELECT * WHERE { 
+                ?s :labelB ?pLabel ; 
+                   :labelD ?label 
+            }}
+        }`,
     ))
 })

@@ -1,40 +1,78 @@
-import { Algebra } from "sparqlalgebrajs";
-import { Node, findFirstOpOfType } from "../t.js";
+import { Algebra, toSparql } from "sparqlalgebrajs";
+import { QueryNode, findFirstOpOfTypeNotRoot, type QueryNodeWithParent } from "../t.js";
 import { strict as assert } from 'assert';
 import { liftBinaryAboveBinary, liftBinaryAboveUnary } from "./lift.js";
-
+import { replaceChild, type OpWithInput } from "./utils.js";
 
 export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
-    const op = findFirstOpOfType<Algebra.Union>(Algebra.types.UNION, query);
+    let unionOp_ = findFirstOpOfTypeNotRoot<Algebra.Union>(Algebra.types.UNION, query);
 
-    if (op === null) {
-        return query; // No Unions to move
+    if (unionOp_ === null) {
+        return query; // No unions to move
     }
 
-    assert(op.parent !== undefined); // Only the root Project node has no parent
+    assert(unionOp_.parent !== null); // Unnecessary since the top level projection must be above the union
+    let unionOp: QueryNodeWithParent<Algebra.Union> | null = unionOp_ as QueryNodeWithParent<Algebra.Union>
 
-    while (op.parent !== undefined) {
-        switch (op.parent.value.type) {
-            case Algebra.types.PROJECT: case Algebra.types.FILTER: {
-                liftBinaryAboveUnary(op.parent.value, op.value);
-
-                break;
-            }
-            case Algebra.types.JOIN: {
-                liftBinaryAboveBinary(op.parent.value, op.value);
-
-                break;
-            }
-            default: {
-                assert(false, `Unhandled SPARQL Algebra type: ${op.parent.value.type}`)
-            }
+    let newQuery: Algebra.Union;
+    do {
+        newQuery = moveUnionToTop(unionOp)
+        //prettyPrintJSON(newQuery)
+        console.log(toSparql({
+            type: Algebra.types.PROJECT,
+            variables: query.variables,
+            input: newQuery,
+        }))
+        const unionOp_ = findFirstOpOfTypeNotRoot<Algebra.Union>(Algebra.types.UNION, newQuery);
+        if (unionOp_ !== null) { 
+            assert(unionOp_.parent !== null) // Unnecessary since the top level union operation is always above!
         }
-        op.parent = op.parent.parent
-    }
+        unionOp = unionOp_ as QueryNodeWithParent<Algebra.Union> | null
+        //console.log(unionOp)
+    } while (unionOp !== null)
 
     return {
         type: Algebra.types.PROJECT,
         variables: query.variables,
-        input: op.value,
+        input: newQuery,
     };
+}
+
+
+export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Algebra.Union {
+    while (true) {
+        let newOp: Algebra.Union;
+        switch (unionOp.parent.value.type) {
+            case Algebra.types.PROJECT: case Algebra.types.FILTER: {
+                newOp = liftBinaryAboveUnary(unionOp.parent.value, unionOp.value);
+
+                break;
+            }
+            case Algebra.types.JOIN: {
+                newOp = liftBinaryAboveBinary(unionOp.parent.value, unionOp.value);
+
+                break;
+            }
+            case Algebra.types.UNION: {
+                // Associative property of union
+                const parent = unionOp.parent.value;
+                const childIdx = parent.input.indexOf(unionOp.value);
+                assert(childIdx != -1);
+                parent.input.splice(childIdx, 1, ...unionOp.value.input); // Replace child with its inputs
+                newOp = parent
+
+                break;
+            }
+            default: {
+                assert(false, `Unhandled SPARQL Algebra type: ${unionOp.parent.value.type}`)
+            }
+        }
+        const parentParent = unionOp.parent.parent as QueryNode<OpWithInput> | null // Can't be a parent if it didn't take inputs
+        if (parentParent !== null) {
+            replaceChild(parentParent.value, unionOp.parent.value, newOp);
+            unionOp = {value: newOp, parent: parentParent}
+        } else {
+            return newOp;
+        }
+    }
 }

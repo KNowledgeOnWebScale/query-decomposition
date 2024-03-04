@@ -2,7 +2,7 @@ import { strict as assert } from 'assert';
 
 import { translate, Algebra, toSparql } from 'sparqlalgebrajs';
 import { prettyPrintJSON } from "./utils.js"
-import { findFirstOpOfType } from './t.js';
+import { findFirstOpOfTypeNotRoot } from './t.js';
 import { moveUnionsToTop } from './lift-operator/union.js';
 
 const q = `
