@@ -5,17 +5,9 @@ PREFIX : <http://x>
  
 SELECT * WHERE {
     {
-        { ?s :labelA ?pLabel }
-        {{ ?s :labelC ?Label }
-        UNION
-        { ?s :labelD ?label }}
-    }
-    UNION
-    {
-        { ?s :labelB ?pLabel }
-        {{ ?s :labelC ?Label }
-        UNION
-        { ?s :labelD ?label }}
+        {?s ?p ?o} UNION {?s ?p ?o2}
+    } UNION {
+        {?s ?p ?o} UNION {?s ?p ?o3}
     }
 }`;
 const x = translate(q, { quads: false });

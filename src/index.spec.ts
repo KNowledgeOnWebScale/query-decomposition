@@ -21,13 +21,13 @@ describe("union decomposition", () => {
     it("Should lift a union above a projection", () => checkQueryDecomposition(
         moveUnionsToTop,
         `
-        PREFIX : <http://example.com>
+        PREFIX : <http://example.com/ns#>
 
         SELECT * WHERE { 
             { ?s :labelA ?label } UNION { ?s :labelB ?label }
         }`,
         `
-        PREFIX : <http://example.com>
+        PREFIX : <http://example.com/ns#>
 
         SELECT ?label ?s WHERE {
             { SELECT ?label ?s WHERE { ?s :labelA ?label. } }
@@ -40,14 +40,14 @@ describe("union decomposition", () => {
         test("filter", () => checkQueryDecomposition(
             moveUnionsToTop,
             `
-            PREFIX : <http://example.com>
+            PREFIX : <http://example.com/ns#>
 
             SELECT * WHERE { 
                 { ?s :labelA ?label } UNION { ?s :labelB ?label }   
                 FILTER(STRLEN(?label) > 0)
             }`,
             `
-            PREFIX : <http://example.com>
+            PREFIX : <http://example.com/ns#>
 
             SELECT ?label ?s WHERE {
                 {
@@ -69,7 +69,7 @@ describe("union decomposition", () => {
         it("join", () => checkQueryDecomposition(
             moveUnionsToTop,
             `
-            PREFIX : <http://example.com>
+            PREFIX : <http://example.com/ns#>
 
             SELECT * WHERE {
                 ?s :label ?pLabel .
@@ -78,29 +78,29 @@ describe("union decomposition", () => {
                 { ?s :labelB ?label }
             }`,
             `
-            PREFIX : <http://example.com>
+            PREFIX : <http://example.com/ns#>
 
             SELECT ?label ?pLabel ?s WHERE {
                 {
                   SELECT ?label ?pLabel ?s WHERE {
-                    ?s :labelA ?label;
-                      :label ?pLabel.
+                    ?s :label ?pLabel;
+                       :labelA ?label.
                   }
                 }
                 UNION
                 {
                   SELECT ?label ?pLabel ?s WHERE {
-                    ?s :labelB ?label;
-                      :label ?pLabel.
+                    ?s :label ?pLabel;
+                       :labelB ?label.
                     }
                 }
             }`,
         ))
     })
-    it("Should lift 2 unions above the final projection and join", () => checkQueryDecomposition(
+    it("Should lift and flatten 2 unions above the final projection and join", () => checkQueryDecomposition(
         moveUnionsToTop,
         `
-        PREFIX : <http://example.com>
+        PREFIX : <http://example.com/ns#>
 
         SELECT * WHERE {
             {
@@ -115,26 +115,26 @@ describe("union decomposition", () => {
             }
         }`,
         `
-        PREFIX : <http://example.com>
+        PREFIX : <http://example.com/ns#>
 
         SELECT * WHERE {
             {SELECT * WHERE { 
-                ?s :labelA ?pLabel ; 
+                ?s :labelA ?pLabel; 
                    :labelC ?label 
             }}
             UNION
             {SELECT * WHERE { 
-                ?s :labelA ?pLabel ; 
+                ?s :labelA ?pLabel;
                    :labelD ?label 
             }}
             UNION
             {SELECT * WHERE { 
-                ?s :labelB ?pLabel ; 
+                ?s :labelB ?pLabel; 
                    :labelC ?label 
             }}
             UNION
             {SELECT * WHERE { 
-                ?s :labelB ?pLabel ; 
+                ?s :labelB ?pLabel; 
                    :labelD ?label 
             }}
         }`,

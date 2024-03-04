@@ -3,3 +3,5 @@ node_modules
 solid_server/data
 
 tsconfig.tsbuildinfo
+
+/.eslintcache
