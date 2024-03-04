@@ -3,8 +3,6 @@ import { strict as assert } from "assert";
 import { translate, Algebra, toSparql } from "sparqlalgebrajs";
 
 import { moveUnionsToTop } from "./lift-operator/union.js";
-import { findFirstOpOfTypeNotRoot } from "./t.js";
-import { prettyPrintJSON } from "./utils.js";
 
 const q = `
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -19,7 +17,7 @@ SELECT ?page ?type ?name WHERE
 }`;
 const tq = translate(q, { quads: false });
 
-assert(tq.type == Algebra.types.PROJECT);
+assert(tq.type === Algebra.types.PROJECT);
 
 //prettyPrintJSON(tq)
 const op = moveUnionsToTop(tq);

@@ -1,3 +1,3 @@
-export function prettyPrintJSON(value: any) {
+export function prettyPrintJSON(value: unknown) {
     console.debug(JSON.stringify(value, null, 2));
 }

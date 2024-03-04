@@ -1,14 +1,12 @@
-import { strict as assert } from "assert";
-
 import Denque from "denque";
 import { Algebra } from "sparqlalgebrajs";
 
-import { type OpWithInput, type WithOpInput } from "./lift-operator/utils.js";
+import { type OpWithInput } from "./lift-operator/utils.js";
 
-export type QueryNode<V extends Algebra.Operation> = {
+export interface QueryNode<V extends Algebra.Operation> {
     value: V;
     parent: QueryNode<OpWithInput> | null;
-};
+}
 export type QueryNodeWithParent<T extends Algebra.Operation> = QueryNode<T> & { parent: QueryNode<Algebra.Operation> };
 
 function takesInputs(x: QueryNode<Algebra.Operation>): x is QueryNode<OpWithInput> {
@@ -22,13 +20,14 @@ export function findFirstOpOfTypeNotRoot<T extends OpWithInput>(
     const queue = new Denque<QueryNode<Algebra.Operation>>([{ value: root, parent: null }]);
 
     while (!queue.isEmpty()) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const v = queue.shift()!;
 
         if (!takesInputs(v)) {
             continue;
         }
 
-        if (v.value.type == opType && v.value !== root) {
+        if (v.value.type === opType && v.value !== root) {
             return v as QueryNode<T>;
         }
 

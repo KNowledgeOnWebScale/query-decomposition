@@ -2,13 +2,13 @@ import { strict as assert } from "assert";
 
 import { Algebra, toSparql } from "sparqlalgebrajs";
 
-import { QueryNode, findFirstOpOfTypeNotRoot, type QueryNodeWithParent } from "../t.js";
+import { findFirstOpOfTypeNotRoot, type QueryNodeWithParent } from "../t.js";
 
 import { liftBinaryAboveBinary, liftBinaryAboveUnary } from "./lift.js";
-import { replaceChild, type OpWithInput } from "./utils.js";
+import { replaceChild } from "./utils.js";
 
 export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
-    let unionOp_ = findFirstOpOfTypeNotRoot<Algebra.Union>(Algebra.types.UNION, query);
+    const unionOp_ = findFirstOpOfTypeNotRoot<Algebra.Union>(Algebra.types.UNION, query);
 
     if (unionOp_ === null) {
         return query; // No unions to move
@@ -62,7 +62,7 @@ export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Alg
                 // Associative property of union
                 const parent = unionOp.parent.value;
                 const childIdx = parent.input.indexOf(unionOp.value);
-                assert(childIdx != -1);
+                assert(childIdx !== -1);
                 parent.input.splice(childIdx, 1, ...unionOp.value.input); // Replace child with its inputs
                 newOp = parent;
 
@@ -72,7 +72,7 @@ export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Alg
                 assert(false, `Unhandled SPARQL Algebra type: ${unionOp.parent.value.type}`);
             }
         }
-        const parentParent = unionOp.parent.parent as QueryNode<OpWithInput> | null; // Can't be a parent if it didn't take inputs
+        const parentParent = unionOp.parent.parent; // Can't be a parent if it didn't take inputs
         if (parentParent !== null) {
             replaceChild(parentParent.value, unionOp.parent.value, newOp);
             unionOp = { value: newOp, parent: parentParent };

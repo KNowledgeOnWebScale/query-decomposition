@@ -10,11 +10,10 @@ function checkQueryDecomposition(
     input: string,
     expected: string,
 ) {
-    let QUERY = translate(input);
-    assert(QUERY.type == Algebra.types.PROJECT);
+    const QUERY = translate(input);
+    assert(QUERY.type === Algebra.types.PROJECT);
 
     const q = decomposeCb(structuredClone(QUERY));
-    assert(q !== null);
 
     console.log(toSparql(q));
     //console.log("=============================")
@@ -41,7 +40,6 @@ describe("union decomposition", () => {
             { SELECT ?label ?s WHERE { ?s :labelB ?label. } }
         }`,
         ));
-
     describe("Lift union over final projection and", () => {
         test("filter", () =>
             checkQueryDecomposition(
@@ -72,7 +70,6 @@ describe("union decomposition", () => {
                 }
             }`,
             ));
-
         it("join", () =>
             checkQueryDecomposition(
                 moveUnionsToTop,
