@@ -1,32 +1,37 @@
 import { moveUnionsToTop } from "./lift-operator/union.js";
 import { Algebra, toSparql, translate } from "sparqlalgebrajs";
 
-import { describe, expect, it, test } from '@jest/globals';
-import { strict as assert } from 'assert';
+import { describe, expect, it, test } from "@jest/globals";
+import { strict as assert } from "assert";
 
-function checkQueryDecomposition(decomposeCb: (query: Algebra.Project) => Algebra.Project, input: string, expected: string) {
+function checkQueryDecomposition(
+    decomposeCb: (query: Algebra.Project) => Algebra.Project,
+    input: string,
+    expected: string,
+) {
     let QUERY = translate(input);
-    assert(QUERY.type == Algebra.types.PROJECT)
+    assert(QUERY.type == Algebra.types.PROJECT);
 
-    const q = decomposeCb(structuredClone(QUERY))
-    assert(q !== null)
+    const q = decomposeCb(structuredClone(QUERY));
+    assert(q !== null);
 
-    console.log(toSparql(q))
+    console.log(toSparql(q));
     //console.log("=============================")
     //console.log(toSparql(translate(expected)))
     expect(toSparql(decomposeCb(QUERY))).toEqual(toSparql(translate(expected)));
 }
 
 describe("union decomposition", () => {
-    it("Should lift a union above a projection", () => checkQueryDecomposition(
-        moveUnionsToTop,
-        `
+    it("Should lift a union above a projection", () =>
+        checkQueryDecomposition(
+            moveUnionsToTop,
+            `
         PREFIX : <http://example.com/ns#>
 
         SELECT * WHERE { 
             { ?s :labelA ?label } UNION { ?s :labelB ?label }
         }`,
-        `
+            `
         PREFIX : <http://example.com/ns#>
 
         SELECT ?label ?s WHERE {
@@ -34,19 +39,20 @@ describe("union decomposition", () => {
             UNION
             { SELECT ?label ?s WHERE { ?s :labelB ?label. } }
         }`,
-    ))
+        ));
 
     describe("Lift union over final projection and", () => {
-        test("filter", () => checkQueryDecomposition(
-            moveUnionsToTop,
-            `
+        test("filter", () =>
+            checkQueryDecomposition(
+                moveUnionsToTop,
+                `
             PREFIX : <http://example.com/ns#>
 
             SELECT * WHERE { 
                 { ?s :labelA ?label } UNION { ?s :labelB ?label }   
                 FILTER(STRLEN(?label) > 0)
             }`,
-            `
+                `
             PREFIX : <http://example.com/ns#>
 
             SELECT ?label ?s WHERE {
@@ -64,11 +70,12 @@ describe("union decomposition", () => {
                 }
                 }
             }`,
-        ))
+            ));
 
-        it("join", () => checkQueryDecomposition(
-            moveUnionsToTop,
-            `
+        it("join", () =>
+            checkQueryDecomposition(
+                moveUnionsToTop,
+                `
             PREFIX : <http://example.com/ns#>
 
             SELECT * WHERE {
@@ -77,7 +84,7 @@ describe("union decomposition", () => {
                 UNION
                 { ?s :labelB ?label }
             }`,
-            `
+                `
             PREFIX : <http://example.com/ns#>
 
             SELECT ?label ?pLabel ?s WHERE {
@@ -95,11 +102,12 @@ describe("union decomposition", () => {
                     }
                 }
             }`,
-        ))
-    })
-    it("Should lift and flatten 2 unions above the final projection and join", () => checkQueryDecomposition(
-        moveUnionsToTop,
-        `
+            ));
+    });
+    it("Should lift and flatten 2 unions above the final projection and join", () =>
+        checkQueryDecomposition(
+            moveUnionsToTop,
+            `
         PREFIX : <http://example.com/ns#>
 
         SELECT * WHERE {
@@ -114,7 +122,7 @@ describe("union decomposition", () => {
                 { ?s :labelD ?label }
             }
         }`,
-        `
+            `
         PREFIX : <http://example.com/ns#>
 
         SELECT * WHERE {
@@ -138,5 +146,5 @@ describe("union decomposition", () => {
                    :labelD ?label 
             }}
         }`,
-    ))
-})
+        ));
+});
