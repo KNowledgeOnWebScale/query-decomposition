@@ -1,10 +1,10 @@
 import { strict as assert } from "assert";
 
-import { Algebra, toSparql } from "sparqlalgebrajs";
+import { Algebra } from "sparqlalgebrajs";
 
 import { findFirstOpOfTypeNotRoot, type QueryNodeWithParent } from "../t.js";
 
-import { liftBinaryAboveBinary, liftBinaryAboveUnary } from "./lift.js";
+import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary } from "./lift.js";
 import { replaceChild } from "./utils.js";
 
 export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
@@ -21,13 +21,13 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
     do {
         newQuery = moveUnionToTop(unionOp);
         //prettyPrintJSON(newQuery)
-        console.log(
-            toSparql({
-                type: Algebra.types.PROJECT,
-                variables: query.variables,
-                input: newQuery,
-            }),
-        );
+        // console.log(
+        //     toSparql({
+        //         type: Algebra.types.PROJECT,
+        //         variables: query.variables,
+        //         input: newQuery,
+        //     }),
+        // );
         const unionOp_ = findFirstOpOfTypeNotRoot<Algebra.Union>(Algebra.types.UNION, newQuery);
         if (unionOp_ !== null) {
             assert(unionOp_.parent !== null); // Unnecessary since the top level union operation is always above!
@@ -49,12 +49,12 @@ export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Alg
         switch (unionOp.parent.value.type) {
             case Algebra.types.PROJECT:
             case Algebra.types.FILTER: {
-                newOp = liftBinaryAboveUnary(unionOp.parent.value, unionOp.value);
+                newOp = liftSeqOfBinaryAboveUnary(unionOp.parent.value, unionOp.value);
 
                 break;
             }
             case Algebra.types.JOIN: {
-                newOp = liftBinaryAboveBinary(unionOp.parent.value, unionOp.value);
+                newOp = liftSeqOfBinaryAboveBinary(unionOp.parent.value, unionOp.value);
 
                 break;
             }
@@ -63,7 +63,7 @@ export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Alg
                 const parent = unionOp.parent.value;
                 const childIdx = parent.input.indexOf(unionOp.value);
                 assert(childIdx !== -1);
-                parent.input.splice(childIdx, 1, ...unionOp.value.input); // Replace child with its inputs
+                parent.input.splice(childIdx, 1, ...unionOp.value.input); // Replace the child with its inputs
                 newOp = parent;
 
                 break;
@@ -75,6 +75,7 @@ export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Alg
         const parentParent = unionOp.parent.parent; // Can't be a parent if it didn't take inputs
         if (parentParent !== null) {
             replaceChild(parentParent.value, unionOp.parent.value, newOp);
+            // eslint-disable-next-line no-param-reassign
             unionOp = { value: newOp, parent: parentParent };
         } else {
             return newOp;

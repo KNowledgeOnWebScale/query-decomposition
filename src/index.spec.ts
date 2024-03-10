@@ -22,7 +22,7 @@ function checkQueryDecomposition(
 }
 
 describe("union decomposition", () => {
-    it("Should lift a union above a projection", () =>
+    it("Should lift a union node with 2 children above a projection", () =>
         checkQueryDecomposition(
             moveUnionsToTop,
             `
@@ -40,7 +40,27 @@ describe("union decomposition", () => {
             { SELECT ?label ?s WHERE { ?s :labelB ?label. } }
         }`,
         ));
-    describe("Lift union over final projection and", () => {
+    it("Should lift a union node with 3 children above a projection", () =>
+        checkQueryDecomposition(
+            moveUnionsToTop,
+            `
+        PREFIX : <http://example.com/ns#>
+
+        SELECT * WHERE { 
+            { ?s :labelA ?label } UNION { ?s :labelB ?label } UNION {?s :labelC ?label }
+        }`,
+            `
+        PREFIX : <http://example.com/ns#>
+
+        SELECT ?label ?s WHERE {
+            { SELECT ?label ?s WHERE { ?s :labelA ?label. } }
+            UNION
+            { SELECT ?label ?s WHERE { ?s :labelB ?label. } }
+            UNION
+            { SELECT ?label ?s WHERE { ?s :labelC ?label. } }
+        }`,
+        ));
+    describe("Should lift a union over final projection and a", () => {
         test("filter", () =>
             checkQueryDecomposition(
                 moveUnionsToTop,
@@ -144,5 +164,79 @@ describe("union decomposition", () => {
                    :labelD ?label 
             }}
         }`,
+        ));
+    it("Should lift a union node with 3 children over the final projection and a join", () =>
+        checkQueryDecomposition(
+            moveUnionsToTop,
+            `
+                PREFIX : <http://example.com/ns#>
+    
+                SELECT * WHERE {
+                    ?s :label ?label1 .
+                    {{ ?s :labelA ?label } 
+                    UNION
+                    { ?s :labelB ?label }
+                    UNION
+                    { ?s :labelC ?label }}
+                }`,
+            `
+                PREFIX : <http://example.com/ns#>
+    
+                SELECT * WHERE {
+                    {
+                      SELECT * WHERE {
+                        ?s :label ?label1;
+                           :labelA ?label.
+                      }
+                    }
+                    UNION
+                    {
+                      SELECT * WHERE {
+                        ?s :label ?label1;
+                           :labelB ?label.
+                        }
+                    }
+                    UNION
+                    {
+                      SELECT * WHERE {
+                        ?s :label ?label1;
+                           :labelC ?label.
+                        }
+                    }
+                }`,
+        ));
+    it("Should lift a union node over the final projection and an associative operator node with 3 children", () =>
+        checkQueryDecomposition(
+            moveUnionsToTop,
+            `
+                PREFIX : <http://example.com/ns#>
+
+                SELECT * WHERE {
+                    ?s :label1 ?label1 .
+                    { ?s :label2 ?label2 . FILTER(strlen(?label2) > 0) }
+                    {{ ?s :labelA ?label } 
+                    UNION
+                    { ?s :labelB ?label }}
+                }`,
+            `
+                PREFIX : <http://example.com/ns#>
+    
+                SELECT * WHERE {
+                    {
+                        SELECT * WHERE {
+                            ?s :label1 ?label1.
+                            { ?s :label2 ?label2 . FILTER(strlen(?label2) > 0) }
+                            ?s :labelA ?label
+                        }
+                    }
+                    UNION
+                    {
+                        SELECT * WHERE {
+                            ?s :label1 ?label1.
+                            { ?s :label2 ?label2 . FILTER(strlen(?label2) > 0) }
+                            ?s :labelB ?label
+                        }
+                    }
+                }`,
         ));
 });

@@ -10,7 +10,6 @@ module.exports = {
         "jest",
         "no-autofix",
         "unused-imports",
-        "@stylistic/eslint-plugin",
         "@typescript-eslint/eslint-plugin",
     ],
     settings: {
@@ -38,6 +37,7 @@ module.exports = {
     rules: {
         "guard-for-in": "error",
         eqeqeq: "error",
+        "no-param-reassign": "error",
         "no-return-await": "error",
         "prefer-const": "error",
         "no-constant-condition": ["error", { checkLoops: false }],
