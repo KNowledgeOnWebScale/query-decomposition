@@ -8,13 +8,9 @@ type BinaryOp = Algebra.Operation & Algebra.Multi;
 export function liftSeqOfBinaryAboveUnary<U extends UnaryOp, B extends BinaryOp>(parentUnary: U, childBinary: B): B {
     assert(parentUnary.input === childBinary);
 
-    const newSubOps = new Array<U>();
-    for (const opArg of childBinary.input) {
-        const newOp = structuredClone(parentUnary);
-        newOp.input = opArg;
-        newSubOps.push(newOp);
-    }
-
+    const newSubOps = childBinary.input.map(subOp => {
+        return { ...structuredClone(parentUnary), input: subOp };
+    });
     return { ...structuredClone(childBinary), input: newSubOps };
 }
 
