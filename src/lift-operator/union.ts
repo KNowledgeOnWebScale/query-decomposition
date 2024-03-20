@@ -17,13 +17,20 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
 
     const origQuery = structuredClone(query);
 
-    assert(hasParent(unionOp_)); // Unnecessary since the top level projection must be above the union
+    assert(hasParent(unionOp_)); // Invariant: the top level projection must be above the union
     let unionOp: QueryNodeWithParent<Algebra.Union> | null = unionOp_;
 
     let newQuery: Algebra.Operation;
+    const skipUnions = new Array<Algebra.Union>(); // Unions that cannot be moved all the way up
     do {
         try {
-            newQuery = moveUnionToTop(unionOp);
+            const newQuery_ = moveUnionToTop(unionOp);
+            if (newQuery_ === null) {
+                skipUnions.push(unionOp.value);
+                newQuery = getTopLevelOp(unionOp.parent.value);
+            } else {
+                newQuery = newQuery_;
+            }
         } catch (err) {
             // Slow to 'fail' decomposition, but faster happy path since initial checks are avoided
             assert(
@@ -39,9 +46,9 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
         //         input: newQuery,
         //     }),
         // );
-        const unionOp_ = findFirstOpOfTypeNotRoot<Algebra.Union>(Algebra.types.UNION, newQuery);
+        const unionOp_ = findFirstOpOfTypeNotRoot<Algebra.Union>(Algebra.types.UNION, newQuery, skipUnions);
         if (unionOp_ !== null) {
-            assert(hasParent(unionOp_)); // Unnecessary since the top level union operation is always above!
+            assert(hasParent(unionOp_)); // Invariant: the top level union operation is always above!
         }
         unionOp = unionOp_;
     } while (unionOp !== null);
@@ -66,15 +73,15 @@ const BINARY_OPS_LEFT_DISTR_TYPES = [Algebra.types.LEFT_JOIN, Algebra.types.MINU
 // Binary parent operators that are at least left- or right-distributive over the union operator
 const BINARY_OPS_TYPES_ANY_DISTR_TYPES = [...BINARY_OPS_DISTR_TYPES, ...BINARY_OPS_LEFT_DISTR_TYPES] as const;
 
-function topLevelOp(startOp: QueryNode<Algebra.Operation>): Algebra.Operation {
-    let op: QueryNode<Algebra.Operation> = startOp;
+function getTopLevelOp(startOp: QueryNode<Algebra.Operation>): Algebra.Operation {
+    let op = startOp;
     while (op.parent !== null) {
         op = op.parent.value;
     }
     return op.value;
 }
 
-export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): OpWithInput {
+export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Algebra.Union | null {
     {
         // Check if union operator occurs in left-hand side operand of operator type present in `BINARY_OPS_LEFT_DISTR_TYPES`
         let op: QueryNode<OpWithInput> = unionOp;
@@ -82,7 +89,7 @@ export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): OpW
             const parentOp = op.parent.value.value;
             if (BINARY_OPS_LEFT_DISTR_TYPES.includes(parentOp.type) && op.parent.childIdx === 1) {
                 // Cannot move union operator all the way to the top, so do not move it at all!
-                return topLevelOp(op.parent.value) as OpWithInput; // Must have input since union does and any operation above it must too
+                return null;
             }
             op = op.parent.value;
         }
