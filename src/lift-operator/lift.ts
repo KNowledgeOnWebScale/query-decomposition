@@ -2,8 +2,8 @@ import { strict as assert } from "assert";
 
 import { type Algebra } from "sparqlalgebrajs";
 
-type UnaryOp = Algebra.Operation & Algebra.Single;
-type BinaryOp = Algebra.Operation & Algebra.Multi;
+export type UnaryOp = Algebra.Operation & Algebra.Single;
+export type BinaryOp = Algebra.Operation & Algebra.Multi;
 
 export function liftSeqOfBinaryAboveUnary<U extends UnaryOp, B extends BinaryOp>(parentUnary: U, childBinary: B): B {
     assert(parentUnary.input === childBinary);

@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "typeRoots": ["./src/types"],
+        "typeRoots": ["./node_modules/@types", "./src/types"],
         "module": "nodenext",
         "lib": ["ES2020"],
         "noEmit": true,

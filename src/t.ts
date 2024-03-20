@@ -3,14 +3,34 @@ import { Algebra } from "sparqlalgebrajs";
 
 import { type OpWithInput } from "./lift-operator/utils.js";
 
-export interface QueryNode<V extends Algebra.Operation> {
+export interface QueryNode<V extends Algebra.Operation, P extends OpWithInput = OpWithInput> {
     value: V;
-    parent: QueryNode<OpWithInput> | null;
+    parent: { value: QueryNode<P>; childIdx: number } | null;
 }
-export type QueryNodeWithParent<T extends Algebra.Operation> = QueryNode<T> & { parent: QueryNode<Algebra.Operation> };
+export type QueryNodeWithParent<V extends Algebra.Operation, P extends OpWithInput = OpWithInput> = QueryNode<V, P> & {
+    parent: NonNullable<QueryNode<V, P>["parent"]>;
+};
 
 function takesInputs(x: QueryNode<Algebra.Operation>): x is QueryNode<OpWithInput> {
     return "input" in x.value;
+}
+
+function OpIsOfType<T extends Algebra.Operation>(x: Algebra.Operation, opType: T["type"]): x is T {
+    return x.type === opType;
+}
+
+// Type guard on properties do not currently affect the parent type: https://github.com/microsoft/TypeScript/issues/42384
+function NodeOpIsOfType<T extends Algebra.Operation>(
+    node: QueryNode<Algebra.Operation>,
+    opType: T["type"],
+): node is QueryNode<T> {
+    return OpIsOfType(node.value, opType);
+}
+
+export function hasParent<V extends Algebra.Operation, P extends OpWithInput = OpWithInput>(
+    node: QueryNode<V, P>,
+): node is QueryNodeWithParent<V, P> {
+    return node.parent !== null;
 }
 
 export function findFirstOpOfTypeNotRoot<T extends OpWithInput>(
@@ -27,16 +47,16 @@ export function findFirstOpOfTypeNotRoot<T extends OpWithInput>(
             continue;
         }
 
-        if (v.value.type === opType && v.value !== root) {
-            return v as QueryNode<T>;
+        if (NodeOpIsOfType<T>(v, opType) && v.value !== root) {
+            return v;
         }
 
         if (Array.isArray(v.value.input)) {
-            for (const child of v.value.input) {
-                queue.push({ value: child, parent: v });
+            for (const [idx, child] of v.value.input.entries()) {
+                queue.push({ value: child, parent: { value: v, childIdx: idx } });
             }
         } else {
-            queue.push({ value: v.value.input, parent: v });
+            queue.push({ value: v.value.input, parent: { value: v, childIdx: 0 } });
         }
     }
 

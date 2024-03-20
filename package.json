@@ -8,7 +8,7 @@
         "start": "node --loader ts-node/esm src/index.ts",
         "debug": "node --loader ts-node/esm src/index.ts --inspect",
         "tests": "jest",
-        "tests:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+        "tests:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
         "prepare": "husky"
     },
     "dependencies": {

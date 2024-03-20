@@ -5,3 +5,5 @@ solid_server/data
 tsconfig.tsbuildinfo
 
 /.eslintcache
+
+coverage
