@@ -3,6 +3,8 @@ import { strict as assert } from "assert";
 import { describe, expect, it, test } from "@jest/globals";
 import { Algebra, toSparql, translate } from "sparqlalgebrajs";
 
+import { areEqualOps } from "../tests/utils.js";
+
 import { moveUnionsToTop } from "./lift-operator/union.js";
 
 function checkQueryDecomposition(input: string, expected: string) {
@@ -12,7 +14,13 @@ function checkQueryDecomposition(input: string, expected: string) {
     //console.log(toSparql(q));
     //console.log("=============================")
     //console.log(toSparql(translate(expected)))
-    expect(toSparql(moveUnionsToTop(query))).toEqual(toSparql(translate(expected)));
+    const tq = moveUnionsToTop(query);
+    const expected_ = translate(expected);
+    if (!areEqualOps(tq, expected_)) {
+        // This comparison is order sensitive, while the above one is (correctly) not...
+        // Therefore, this output might be slightly misleading, but is better then nothing...
+        expect(toSparql(tq)).toEqual(toSparql(expected_));
+    }
 }
 
 function checkUnmodifiedQueryDecomposition(input: string) {
@@ -254,13 +262,13 @@ it("Should lift and flatten 2 unions above the final projection and join", () =>
             }}
             UNION
             {SELECT * WHERE { 
-                ?s :labelA ?pLabel;
-                    :labelD ?label 
+                ?s :labelB ?pLabel; 
+                    :labelC ?label 
             }}
             UNION
             {SELECT * WHERE { 
-                ?s :labelB ?pLabel; 
-                    :labelC ?label 
+                ?s :labelA ?pLabel;
+                    :labelD ?label 
             }}
             UNION
             {SELECT * WHERE { 

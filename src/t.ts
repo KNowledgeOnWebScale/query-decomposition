@@ -68,3 +68,34 @@ export function findFirstOpOfTypeNotRoot<T extends OpWithInput>(
 
     return null;
 }
+
+export function findFirstOpOfTypeNotRoot2<T extends OpWithInput>(
+    opType: T["type"],
+    root: Algebra.Operation,
+    ignoreNodes: Algebra.Operation[] = [],
+): QueryNode<T> | null {
+    const stack = new Array<QueryNode<Algebra.Operation>>({ value: root, parent: null });
+
+    while (stack.length !== 0) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const v = stack.pop()!;
+
+        if (!NodeOpTakesInput(v)) {
+            continue;
+        }
+
+        if (NodeOpIsOfType<T>(v, opType) && ![root, ...ignoreNodes].includes(v.value)) {
+            return v;
+        }
+
+        if (Array.isArray(v.value.input)) {
+            for (const [idx, child] of v.value.input.entries()) {
+                stack.push({ value: child, parent: { value: v, childIdx: idx } });
+            }
+        } else {
+            stack.push({ value: v.value.input, parent: { value: v, childIdx: 0 } });
+        }
+    }
+
+    return null;
+}

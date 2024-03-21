@@ -2,14 +2,14 @@ import { strict as assert } from "assert";
 
 import { Algebra } from "sparqlalgebrajs";
 
-import { findFirstOpOfTypeNotRoot, hasParent, type QueryNode, type QueryNodeWithParent } from "../t.js";
+import { findFirstOpOfTypeNotRoot2, hasParent, type QueryNode, type QueryNodeWithParent } from "../t.js";
 
-import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary } from "./lift.js";
+import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary, type BinaryOp, type UnaryOp } from "./lift.js";
 import { UnsupportedSPARQLOpError } from "./unsupported-SPARQL-op-error.js";
 import { replaceChild, type OpWithInput } from "./utils.js";
 
 export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
-    const unionOp_ = findFirstOpOfTypeNotRoot<Algebra.Union>(Algebra.types.UNION, query);
+    const unionOp_ = findFirstOpOfTypeNotRoot2<Algebra.Union>(Algebra.types.UNION, query);
 
     if (unionOp_ === null) {
         return query; // No unions to move
@@ -39,14 +39,14 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
             );
             return origQuery;
         }
-        //console.log(
+        // console.log(
         //     toSparql({
         //         type: Algebra.types.PROJECT,
         //         variables: query.variables,
         //         input: newQuery,
         //     }),
         // );
-        const unionOp_ = findFirstOpOfTypeNotRoot<Algebra.Union>(Algebra.types.UNION, newQuery, skipUnions);
+        const unionOp_ = findFirstOpOfTypeNotRoot2<Algebra.Union>(Algebra.types.UNION, newQuery, skipUnions);
         if (unionOp_ !== null) {
             assert(hasParent(unionOp_)); // Invariant: the top level union operation is always above!
         }
@@ -65,21 +65,13 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
 }
 
 // Unary parent operators that preserves the union operator
-const UNARY_OPERATOR_TYPES = [Algebra.types.FILTER, Algebra.types.PROJECT] as const;
+const UNARY_OPERATOR_TYPES = [Algebra.types.PROJECT, Algebra.types.FILTER] as const;
 // Binary parent operators that are distributive over the union operator
 const BINARY_OPS_DISTR_TYPES = [Algebra.types.JOIN] as const;
 // Non-commutative binary parent operators that are left-distributive over the union operator
 const BINARY_OPS_LEFT_DISTR_TYPES = [Algebra.types.LEFT_JOIN, Algebra.types.MINUS] as const;
 // Binary parent operators that are at least left- or right-distributive over the union operator
 const BINARY_OPS_TYPES_ANY_DISTR_TYPES = [...BINARY_OPS_DISTR_TYPES, ...BINARY_OPS_LEFT_DISTR_TYPES] as const;
-
-function getTopLevelOp(startOp: QueryNode<Algebra.Operation>): Algebra.Operation {
-    let op = startOp;
-    while (op.parent !== null) {
-        op = op.parent.value;
-    }
-    return op.value;
-}
 
 export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Algebra.Union | null {
     {
@@ -100,9 +92,9 @@ export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Alg
 
         let newOp: Algebra.Union;
         if (UNARY_OPERATOR_TYPES.includes(parentOp.type)) {
-            newOp = liftSeqOfBinaryAboveUnary(parentOp, unionOp.value);
+            newOp = liftSeqOfBinaryAboveUnary(parentOp as UnaryOp, unionOp.value);
         } else if (BINARY_OPS_TYPES_ANY_DISTR_TYPES.includes(parentOp.type)) {
-            newOp = liftSeqOfBinaryAboveBinary(parentOp, unionOp.value);
+            newOp = liftSeqOfBinaryAboveBinary(parentOp as BinaryOp, unionOp.value);
         } else if (parentOp.type === Algebra.types.UNION) {
             // Associative property of the union operator
             const childIdx = parentOp.input.indexOf(unionOp.value);
@@ -122,4 +114,12 @@ export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Alg
             return newOp;
         }
     }
+}
+
+function getTopLevelOp(startOp: QueryNode<Algebra.Operation>): Algebra.Operation {
+    let op = startOp;
+    while (op.parent !== null) {
+        op = op.parent.value;
+    }
+    return op.value;
 }
