@@ -3,19 +3,21 @@ import { strict as assert } from "assert";
 import { describe, expect, it, test } from "@jest/globals";
 import { Algebra, toSparql, translate } from "sparqlalgebrajs";
 
-import { areEqualOps } from "../tests/utils.js";
+import { areEqualOps } from "../tests/compare-queries.js";
 
 import { moveUnionsToTop } from "./lift-operator/union.js";
 
 function checkQueryDecomposition(input: string, expected: string) {
-    const query = translate(input);
+    const query = translate(input, { quads: false });
     assert(query.type === Algebra.types.PROJECT);
 
-    //console.log(toSparql(q));
     //console.log("=============================")
-    //console.log(toSparql(translate(expected)))
     const tq = moveUnionsToTop(query);
-    const expected_ = translate(expected);
+    const expected_ = translate(expected, { quads: false });
+
+    // console.log(tq);
+    // console.log(toSparql(expected_))
+
     if (!areEqualOps(tq, expected_)) {
         // This comparison is order sensitive, while the above one is (correctly) not...
         // Therefore, this output might be slightly misleading, but is better then nothing...
@@ -351,3 +353,17 @@ it("Should lift a union over the final projection and an associative operator wi
             }
         }`,
     ));
+
+// eslint-disable-next-line jest/no-commented-out-tests
+// it("Flattens joins when created during decomposition", () => {
+//     `
+//     PREFIX : <http://example.com/ns#>
+
+//     SELECT * WHERE {
+//         {
+//             {{?s :l1 ?l1} . {?s :l2 ?l2}}
+//             UNION
+//             {{?s :l3 ?l3} . {?s :l4 ?l4}}
+//         } . { ?s :l5 ?l5 }
+//     }`
+// })

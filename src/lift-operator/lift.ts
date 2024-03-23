@@ -1,6 +1,6 @@
 import { strict as assert } from "assert";
 
-import { type Algebra } from "sparqlalgebrajs";
+import { Algebra } from "sparqlalgebrajs";
 
 export type UnaryOp = Algebra.Operation & Algebra.Single;
 export type BinaryOp = Algebra.Operation & Algebra.Multi;
@@ -9,7 +9,11 @@ export function liftSeqOfBinaryAboveUnary<U extends UnaryOp, B extends BinaryOp>
     assert(parentUnary.input === childBinary);
 
     const newSubOps = childBinary.input.map(subOp => {
-        return { ...structuredClone(parentUnary), input: subOp };
+        const t = { ...structuredClone(parentUnary), input: subOp };
+        // if (t.type == Algebra.types.PROJECT) {
+        //     t.variables = Util.inScopeVariables(t.input);
+        // }
+        return t;
     });
     return { ...structuredClone(childBinary), input: newSubOps };
 }

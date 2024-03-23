@@ -123,3 +123,7 @@ function getTopLevelOp(startOp: QueryNode<Algebra.Operation>): Algebra.Operation
     }
     return op.value;
 }
+
+// function OpIsOneOf<T extends Algebra.Operation[], K extends Readonly<T[number]["type"][]>>(types: K, node: Algebra.Operation): node is T[number] {
+//     return types.includes(node.type);
+// }

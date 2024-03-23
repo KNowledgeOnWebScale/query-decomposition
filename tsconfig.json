@@ -18,5 +18,5 @@
         "strictNullChecks": true,
         "esModuleInterop": true
     },
-    "include": ["src/**/*", "tests/**/*", "package.json"]
+    "include": ["src/**/*", "tests/**/*", "package.json", "testSetup.ts"]
 }
