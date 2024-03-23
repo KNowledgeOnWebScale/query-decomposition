@@ -1,9 +1,11 @@
+import * as matchers from "jest-extended";
+
 declare module "expect" {
-    type JestExtendedMatchers<R> = CustomMatchers<R>;
+    type JestExtendedMatchers = typeof matchers;
 
     // eslint-disable-next-line  @typescript-eslint/no-empty-interface, @typescript-eslint/no-explicit-any
-    export interface AsymmetricMatchers extends JestExtendedMatchers<any> {}
+    export interface AsymmetricMatchers extends JestExtendedMatchers {}
 
     // eslint-disable-next-line  @typescript-eslint/no-empty-interface
-    export interface Matchers<R> extends JestExtendedMatchers<R> {}
+    export interface Matchers extends JestExtendedMatchers {}
 }

@@ -18,5 +18,11 @@
         "strictNullChecks": true,
         "esModuleInterop": true
     },
-    "include": ["src/**/*", "tests/**/*", "package.json", "testSetup.ts"]
+    "include": ["src/**/*", "tests/**/*", "package.json", "testSetup.ts"],
+    "ts-node": {
+        "experimentalSpecifierResolution": "node",
+        // Skip typechecking
+        "transpileOnly": true,
+        "esm": true
+    }
 }
