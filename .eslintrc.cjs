@@ -41,7 +41,7 @@ module.exports = {
         "no-return-await": "error",
         "prefer-const": "error",
         "no-constant-condition": ["error", { checkLoops: false }],
-        "jest/expect-expect": ["error", { assertFunctionNames: ["checkQueryDecomposition", "checkUnmodifiedQueryDecomposition", "checkBinaryOpQueryDecomposition"] }],
+        "jest/expect-expect": "off",
         //"no-autofix/prefer-const": "error",
         "unused-imports/no-unused-imports": "error",
         //"no-autofix/unused-imports/no-unused-imports": "error",

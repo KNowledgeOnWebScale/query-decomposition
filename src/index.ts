@@ -1,9 +1,7 @@
 import { strict as assert } from "assert";
 
-import { translate } from "sparqlalgebrajs";
-
-import { toSparql, translate as translateToInternalRepresentation } from "./tree/translate.js";
-import { Algebra } from "./tree/types.js";
+import { Algebra } from "./query-tree/index.js";
+import { toSparql, translate } from "./query-tree/translate.js";
 import { prettyPrintJSON } from "./utils.js";
 
 // const q = `
@@ -26,8 +24,7 @@ SELECT * WHERE {
         {?s :l4 ?l4}
     }
 }`;
-const tq2 = translate(q2);
-const tq3 = translateToInternalRepresentation(tq2);
+const tq3 = translate(q2);
 assert(tq3.type === Algebra.types.PROJECT);
 
 prettyPrintJSON(tq3);

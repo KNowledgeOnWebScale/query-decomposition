@@ -2,10 +2,10 @@ import { strict as assert } from "assert";
 
 import { Algebra } from "sparqlalgebrajs";
 
+import { UnsupportedSPARQLOpError } from "../query-tree/unsupported-SPARQL-op-error.js";
 import { findFirstOpOfTypeNotRoot2, hasParent, type QueryNode, type QueryNodeWithParent } from "../t.js";
 
 import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary, type BinaryOp, type UnaryOp } from "./lift.js";
-import { UnsupportedSPARQLOpError } from "./unsupported-SPARQL-op-error.js";
 import { replaceChild, type OpWithInput } from "./utils.js";
 
 export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {

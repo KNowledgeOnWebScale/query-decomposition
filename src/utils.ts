@@ -11,3 +11,6 @@ export type ArrayMinLength<T, N extends number> = BuildArrayMinLength<T, N, []>;
 export function hasLengthAtLeast<T, L extends number>(arr: T[], length: L): arr is ArrayMinLength<T, L> {
     return arr.length >= length;
 }
+
+export type SingleType<T, U extends T = T> = T extends unknown ? ([U] extends [T] ? T : never) : T;
+// https://stackoverflow.com/questions/53953814/typescript-check-if-a-type-is-a-union

@@ -16,20 +16,20 @@ export function takesInput(x: Algebra.Operation): x is OpWithInput {
 }
 
 // Type guard on properties do not currently affect the parent type: https://github.com/microsoft/TypeScript/issues/42384
-function NodeOpTakesInput(x: QueryNode<Algebra.Operation>): x is QueryNode<OpWithInput> {
+function hasChildren(x: QueryNode<Algebra.Operation>): x is QueryNode<OpWithInput> {
     return takesInput(x.value);
 }
 
-function OpIsOfType<T extends Algebra.Operation>(x: Algebra.Operation, opType: T["type"]): x is T {
+export function isOpOfType<T extends Algebra.Operation>(x: Algebra.Operation, opType: T["type"]): x is T {
     return x.type === opType;
 }
 
 // Type guard on properties do not currently affect the parent type: https://github.com/microsoft/TypeScript/issues/42384
-function NodeOpIsOfType<T extends Algebra.Operation>(
+function isNodeOpOfType<T extends Algebra.Operation>(
     node: QueryNode<Algebra.Operation>,
     opType: T["type"],
 ): node is QueryNode<T> {
-    return OpIsOfType(node.value, opType);
+    return isOpOfType(node.value, opType);
 }
 
 export function hasParent<V extends Algebra.Operation, P extends OpWithInput = OpWithInput>(
@@ -49,11 +49,11 @@ export function findFirstOpOfTypeNotRoot<T extends OpWithInput>(
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const v = queue.shift()!;
 
-        if (!NodeOpTakesInput(v)) {
+        if (!hasChildren(v)) {
             continue;
         }
 
-        if (NodeOpIsOfType<T>(v, opType) && ![root, ...ignoreNodes].includes(v.value)) {
+        if (isNodeOpOfType<T>(v, opType) && ![root, ...ignoreNodes].includes(v.value)) {
             return v;
         }
 
@@ -80,11 +80,11 @@ export function findFirstOpOfTypeNotRoot2<T extends OpWithInput>(
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const v = stack.pop()!;
 
-        if (!NodeOpTakesInput(v)) {
+        if (!hasChildren(v)) {
             continue;
         }
 
-        if (NodeOpIsOfType<T>(v, opType) && ![root, ...ignoreNodes].includes(v.value)) {
+        if (isNodeOpOfType<T>(v, opType) && ![root, ...ignoreNodes].includes(v.value)) {
             return v;
         }
 
