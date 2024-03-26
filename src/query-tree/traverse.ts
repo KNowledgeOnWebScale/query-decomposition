@@ -1,27 +1,25 @@
 import Denque from "denque";
-import { Algebra } from "sparqlalgebrajs";
 
-import { type OpWithInput } from "./lift-operator/utils.js";
+import { Algebra } from "./index.js";
 
-export interface QueryNode<V extends Algebra.Operation, P extends OpWithInput = OpWithInput> {
+export interface QueryNode<V extends Algebra.Operand, P extends Algebra.Operation = Algebra.Operation> {
     value: V;
     parent: { value: QueryNode<P>; childIdx: number } | null;
 }
-export type QueryNodeWithParent<V extends Algebra.Operation, P extends OpWithInput = OpWithInput> = QueryNode<V, P> & {
+export type QueryNodeWithParent<V extends Algebra.Operand, P extends Algebra.Operation = Algebra.Operation> = QueryNode<
+    V,
+    P
+> & {
     parent: NonNullable<QueryNode<V, P>["parent"]>;
 };
 
-export function takesInput(x: Algebra.Operation): x is OpWithInput {
+function isOp(x: Algebra.Operand): x is Algebra.Operation {
     return "input" in x;
 }
 
 // Type guard on properties do not currently affect the parent type: https://github.com/microsoft/TypeScript/issues/42384
-function hasChildren(x: QueryNode<Algebra.Operation>): x is QueryNode<OpWithInput> {
-    return takesInput(x.value);
-}
-
-export function isOpOfType<T extends Algebra.Operation>(x: Algebra.Operation, opType: T["type"]): x is T {
-    return x.type === opType;
+function hasChildren(x: QueryNode<Algebra.Operand>): x is QueryNode<Algebra.Operation> {
+    return isOp(x.value);
 }
 
 // Type guard on properties do not currently affect the parent type: https://github.com/microsoft/TypeScript/issues/42384
@@ -29,21 +27,21 @@ function isNodeOpOfType<T extends Algebra.Operation>(
     node: QueryNode<Algebra.Operation>,
     opType: T["type"],
 ): node is QueryNode<T> {
-    return isOpOfType(node.value, opType);
+    return Algebra.isOfOpType(node.value, opType);
 }
 
-export function hasParent<V extends Algebra.Operation, P extends OpWithInput = OpWithInput>(
+export function hasParent<V extends Algebra.Operation, P extends Algebra.Operation = Algebra.Operation>(
     node: QueryNode<V, P>,
 ): node is QueryNodeWithParent<V, P> {
     return node.parent !== null;
 }
 
-export function findFirstOpOfTypeNotRoot<T extends OpWithInput>(
+export function findFirstOpOfTypeNotRoot<T extends Algebra.Operation>(
     opType: T["type"],
     root: Algebra.Operation,
     ignoreNodes: Algebra.Operation[] = [],
 ): QueryNode<T> | null {
-    const queue = new Denque<QueryNode<Algebra.Operation>>([{ value: root, parent: null }]);
+    const queue = new Denque<QueryNode<Algebra.Operand>>([{ value: root, parent: null }]);
 
     while (!queue.isEmpty()) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -69,12 +67,12 @@ export function findFirstOpOfTypeNotRoot<T extends OpWithInput>(
     return null;
 }
 
-export function findFirstOpOfTypeNotRoot2<T extends OpWithInput>(
+export function findFirstOpOfTypeNotRoot2<T extends Algebra.Operation>(
     opType: T["type"],
     root: Algebra.Operation,
     ignoreNodes: Algebra.Operation[] = [],
 ): QueryNode<T> | null {
-    const stack = new Array<QueryNode<Algebra.Operation>>({ value: root, parent: null });
+    const stack = new Array<QueryNode<Algebra.Operand>>({ value: root, parent: null });
 
     while (stack.length !== 0) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

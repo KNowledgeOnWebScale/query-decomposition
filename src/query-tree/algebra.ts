@@ -1,3 +1,5 @@
+import hash from "object-hash";
+
 import type { ArrayMinLength, SingleType } from "../utils.js";
 
 export enum types {
@@ -14,31 +16,37 @@ export interface BaseOperation {
     type: types;
 }
 
-export type Operation = Project | Union | Minus | Join | LeftJoin | Filter | Bgp;
+export type Operation = Project | Union | Minus | Join | LeftJoin | Filter;
+export type Operand = Operation | Bgp;
 export type OpTypeMapping = {
     [K in types]: SingleType<Extract<Operation, { type: K }>>;
 };
 
-export interface Single extends BaseOperation {
-    input: Operation;
+interface Unary extends BaseOperation {
+    input: Operand;
 }
-export interface Double extends BaseOperation {
-    input: [Operation, Operation];
-}
-export interface Multi extends BaseOperation {
-    input: ArrayMinLength<Operation, 2>;
-}
+export type UnaryOp = Extract<Operation, Unary>;
 
-export interface Project extends Single {
+interface Binary extends BaseOperation {
+    input: [Operand, Operand];
+}
+export type BinaryOp = Extract<Operation, Binary>;
+
+interface Multi extends BaseOperation {
+    input: ArrayMinLength<Operand, 2>;
+}
+export type MultiOp = Extract<Operation, Multi>;
+
+export interface Project extends Unary {
     type: types.PROJECT;
-    variables: Comparable<unknown>[];
+    variables: Hashable[];
 }
 
 export interface Union extends Multi {
     type: types.UNION;
 }
 
-export interface Minus extends Double {
+export interface Minus extends Binary {
     type: types.MINUS;
 }
 
@@ -46,32 +54,33 @@ export interface Join extends Multi {
     type: types.JOIN;
 }
 
-export interface LeftJoin extends Double {
+export interface LeftJoin extends Binary {
     type: types.LEFT_JOIN;
-    expression?: unknown;
+    expression?: Hashable;
 }
 
-export interface Filter extends Single {
+export interface Filter extends Unary {
     type: types.FILTER;
-    expression: unknown;
+    expression: Hashable;
 }
 
 export interface Bgp extends BaseOperation {
     type: types.BGP;
-    patterns: Comparable<unknown>[];
+    patterns: Hashable[];
 }
 
 //
 // Type Guards
 //
-export function isOfOpType<U extends types>(op: Operation, opType: U): op is OpTypeMapping[U] {
+export function isOfOpType<U extends keyof OpTypeMapping>(op: Operation, opType: U): op is OpTypeMapping[U] {
     return op.type === opType;
 }
 
-export function hasSameOpTypeAs<T extends Operation>(x: Operation, y: T): x is T {
-    return x.type === y.type;
+export function isOneOfOpTypes<U extends keyof OpTypeMapping>(
+    op: Operation,
+    opTypes: readonly U[],
+): op is OpTypeMapping[U] {
+    return opTypes.includes(op.type);
 }
 
-interface Comparable<T> {
-    equals(other: T): boolean;
-}
+type Hashable = hash.NotUndefined;

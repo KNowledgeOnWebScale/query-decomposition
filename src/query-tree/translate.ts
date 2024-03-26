@@ -8,124 +8,114 @@ import {
 
 import { hasLengthAtLeast, type ArrayMinLength } from "../utils.js";
 
-import {
-    types,
-    type Bgp,
-    type Filter,
-    type Join,
-    type LeftJoin,
-    type Minus,
-    type Operation,
-    type Project,
-    type Union,
-} from "./algebra.js";
-import { UnsupportedSPARQLOpError } from "./unsupported-SPARQL-op-error.js";
+import * as Algebra from "./algebra.js";
+import { UnsupportedAlgebraElement } from "./unsupported-element-error.js";
 
 export function translate(op: string) {
     return _translate(translateExternal(op, { quads: false }));
 }
 
-function _translate(op: AlgebraExternal.Operation): Operation {
-    switch (op.type) {
+export function _translate(opd: AlgebraExternal.Operation): Algebra.Operand {
+    switch (opd.type) {
         case AlgebraExternal.types.PROJECT: {
             return {
-                type: types.PROJECT,
-                input: _translate(op.input),
-                variables: op.variables,
-            } satisfies Project;
+                type: Algebra.types.PROJECT,
+                input: _translate(opd.input),
+                variables: opd.variables,
+            } satisfies Algebra.Project;
         }
         case AlgebraExternal.types.UNION: {
-            assert(hasLengthAtLeast(op.input, 2));
+            assert(hasLengthAtLeast(opd.input, 2));
 
             return {
-                type: types.UNION,
-                input: op.input.map(_translate) as ArrayMinLength<Operation, 2>,
-            } satisfies Union;
+                type: Algebra.types.UNION,
+                input: opd.input.map(_translate) as ArrayMinLength<Algebra.Operation, 2>,
+            } satisfies Algebra.Union;
         }
         case AlgebraExternal.types.MINUS: {
             return {
-                type: types.MINUS,
-                input: [_translate(op.input[0]), _translate(op.input[1])],
-            } satisfies Minus;
+                type: Algebra.types.MINUS,
+                input: [_translate(opd.input[0]), _translate(opd.input[1])],
+            } satisfies Algebra.Minus;
         }
         case AlgebraExternal.types.JOIN: {
-            assert(hasLengthAtLeast(op.input, 2));
+            assert(hasLengthAtLeast(opd.input, 2));
 
             return {
-                type: types.JOIN,
-                input: op.input.map(_translate) as ArrayMinLength<Operation, 2>,
-            } satisfies Join;
+                type: Algebra.types.JOIN,
+                input: opd.input.map(_translate) as ArrayMinLength<Algebra.Operation, 2>,
+            } satisfies Algebra.Join;
         }
         case AlgebraExternal.types.LEFT_JOIN: {
             return {
-                type: types.LEFT_JOIN,
-                input: [_translate(op.input[0]), _translate(op.input[1])],
-            } satisfies LeftJoin;
+                type: Algebra.types.LEFT_JOIN,
+                input: [_translate(opd.input[0]), _translate(opd.input[1])],
+            } satisfies Algebra.LeftJoin;
         }
         case AlgebraExternal.types.FILTER: {
             return {
-                type: types.FILTER,
-                input: _translate(op.input),
-                expression: op.expression,
-            } satisfies Filter;
+                type: Algebra.types.FILTER,
+                input: _translate(opd.input),
+                expression: opd.expression,
+            } satisfies Algebra.Filter;
         }
         case AlgebraExternal.types.BGP: {
             return {
-                type: types.BGP,
-                patterns: op.patterns,
-            } satisfies Bgp;
+                type: Algebra.types.BGP,
+                patterns: opd.patterns,
+            } satisfies Algebra.Bgp;
         }
         default: {
-            throw new UnsupportedSPARQLOpError(op);
+            throw new UnsupportedAlgebraElement(opd);
         }
     }
 }
 
-export function toSparql(query: Project): string {
-    return toSparqlExternal(reserveTranslate(query));
+export function toSparql(query: Algebra.Project): string {
+    return toSparqlExternal(reverseTranslate(query));
 }
 
-function reserveTranslate(op: Operation): AlgebraExternal.Operation {
+export function reverseTranslate(op: Algebra.Operand): AlgebraExternal.Operation {
     switch (op.type) {
-        case types.PROJECT: {
+        case Algebra.types.PROJECT: {
             return {
                 type: AlgebraExternal.types.PROJECT,
-                input: reserveTranslate(op.input),
+                input: reverseTranslate(op.input),
                 variables: op.variables as AlgebraExternal.Project["variables"],
             } satisfies AlgebraExternal.Project;
         }
-        case types.UNION: {
+        case Algebra.types.UNION: {
             return {
                 type: AlgebraExternal.types.UNION,
-                input: op.input.map(reserveTranslate),
+                input: op.input.map(reverseTranslate),
             } satisfies AlgebraExternal.Union;
         }
-        case types.MINUS: {
+        case Algebra.types.MINUS: {
             return {
                 type: AlgebraExternal.types.MINUS,
-                input: [reserveTranslate(op.input[0]), reserveTranslate(op.input[1])],
+                input: op.input.map(reverseTranslate),
             } satisfies AlgebraExternal.Minus;
         }
-        case types.JOIN: {
+        case Algebra.types.JOIN: {
             return {
                 type: AlgebraExternal.types.JOIN,
-                input: op.input.map(reserveTranslate),
+                input: op.input.map(reverseTranslate),
             } satisfies AlgebraExternal.Join;
         }
-        case types.LEFT_JOIN: {
+        case Algebra.types.LEFT_JOIN: {
             return {
                 type: AlgebraExternal.types.LEFT_JOIN,
-                input: [reserveTranslate(op.input[0]), reserveTranslate(op.input[1])],
+                input: op.input.map(reverseTranslate),
             } satisfies AlgebraExternal.LeftJoin;
         }
-        case types.FILTER: {
+        case Algebra.types.FILTER: {
             return {
                 type: AlgebraExternal.types.FILTER,
-                input: reserveTranslate(op.input),
+                input: reverseTranslate(op.input),
                 expression: op.expression as AlgebraExternal.Filter["expression"],
             } satisfies AlgebraExternal.Filter;
         }
-        case types.BGP: {
+        case Algebra.types.BGP: {
             return {
                 type: AlgebraExternal.types.BGP,
                 patterns: op.patterns as unknown as AlgebraExternal.Bgp["patterns"],

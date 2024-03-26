@@ -1,73 +1,61 @@
 import hash from "object-hash";
 
-import {
-    types,
-    type Bgp,
-    type Filter,
-    type Join,
-    type LeftJoin,
-    type Minus,
-    type Operation,
-    type Project,
-    type Union,
-} from "./algebra.js";
+import * as Algebra from "./algebra.js";
 
-function haveEqualOpType<A extends Operation>(a: A, b: Operation): b is A {
-    return a.type === b.type;
+function areUnorderedEqual<T>(a: T[], b: T[], compareElementsCb: (x: T, y: T) => boolean) {
+    return a.length === b.length && a.every(x => b.some(y => compareElementsCb(x, y)));
 }
 
-export function areEqualOps(a: Operation, b_: Operation): boolean {
-    if (!haveEqualOpType(a, b_)) {
+function areOrderedEqual<T>(a: T[], b: T[], compareElementsCb: (x: T, y: T) => boolean) {
+    return a.length === b.length && a.every((x, idx) => compareElementsCb(x, b[idx]));
+}
+
+export function areEqualOps(a: Algebra.Operand, b_: Algebra.Operand): boolean {
+    if (a.type !== b_.type) {
         return false;
     }
-
-    const areOpsUnorderedEqual = (inp1: Operation[], inp2: Operation[]) =>
-        inp1.length === inp2.length && inp1.every(x => inp2.some(y => areEqualOps(y, x)));
-    const areOpsOrderedEqual = (inp1: Operation[], inp2: Operation[]) =>
-        inp1.length === inp2.length && inp1.every((x, idx) => areEqualOps(x, inp2[idx]));
 
     // Compare hashes of objects that have to match exactly
     const hashOrUndefined = (x: hash.NotUndefined | undefined) => (x !== undefined ? hash(x) : x);
 
     // Type narrowing doesn't currently affect the shared generic
     switch (a.type) {
-        case types.PROJECT: {
-            const b = b_ as Project;
-
-            return a.variables.every(x => b.variables.some(y => y.equals(x))) && areEqualOps(a.input, b.input);
-        }
-        case types.UNION:
-        case types.JOIN: {
-            const b = b_ as Union | Join;
-
-            return areOpsUnorderedEqual(a.input, b.input);
-        }
-        case types.LEFT_JOIN: {
-            const b = b_ as LeftJoin;
+        case Algebra.types.PROJECT: {
+            const b = b_ as Algebra.Project;
 
             return (
-                hashOrUndefined(a.expression as hash.NotUndefined | undefined) ===
-                    hashOrUndefined(b.expression as hash.NotUndefined | undefined) &&
-                areOpsOrderedEqual(a.input, b.input)
-            );
-        }
-        case types.MINUS: {
-            const b = b_ as Minus;
-
-            return areOpsOrderedEqual(a.input, b.input);
-        }
-        case types.BGP: {
-            const b = b_ as Bgp;
-
-            return a.patterns.every(x => b.patterns.find(y => y.equals(x)));
-        }
-        case types.FILTER: {
-            const b = b_ as Filter;
-
-            return (
-                hash(a.expression as hash.NotUndefined) === hash(b.expression as hash.NotUndefined) &&
+                areUnorderedEqual(a.variables, b.variables, (a, b) => hash(a) === hash(b)) &&
                 areEqualOps(a.input, b.input)
             );
+        }
+        case Algebra.types.UNION:
+        case Algebra.types.JOIN: {
+            const b = b_ as Algebra.Union | Algebra.Join;
+
+            return areUnorderedEqual(a.input, b.input, areEqualOps);
+        }
+        case Algebra.types.LEFT_JOIN: {
+            const b = b_ as Algebra.LeftJoin;
+
+            return (
+                hashOrUndefined(a.expression) === hashOrUndefined(b.expression) &&
+                areOrderedEqual(a.input, b.input, areEqualOps)
+            );
+        }
+        case Algebra.types.MINUS: {
+            const b = b_ as Algebra.Minus;
+
+            return areOrderedEqual(a.input, b.input, areEqualOps);
+        }
+        case Algebra.types.BGP: {
+            const b = b_ as Algebra.Bgp;
+
+            return areUnorderedEqual(a.patterns, b.patterns, (a, b) => hash(a) === hash(b));
+        }
+        case Algebra.types.FILTER: {
+            const b = b_ as Algebra.Filter;
+
+            return hash(a.expression) === hash(b.expression) && areEqualOps(a.input, b.input);
         }
     }
 }

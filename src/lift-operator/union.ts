@@ -1,12 +1,16 @@
 import { strict as assert } from "assert";
 
-import { Algebra } from "sparqlalgebrajs";
+import { Algebra } from "../query-tree/index.js";
+import {
+    findFirstOpOfTypeNotRoot2,
+    hasParent,
+    type QueryNode,
+    type QueryNodeWithParent,
+} from "../query-tree/traverse.js";
+import { UnsupportedAlgebraElement } from "../query-tree/unsupported-element-error.js";
 
-import { UnsupportedSPARQLOpError } from "../query-tree/unsupported-SPARQL-op-error.js";
-import { findFirstOpOfTypeNotRoot2, hasParent, type QueryNode, type QueryNodeWithParent } from "../t.js";
-
-import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary, type BinaryOp, type UnaryOp } from "./lift.js";
-import { replaceChild, type OpWithInput } from "./utils.js";
+import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary } from "./lift.js";
+import { replaceChild } from "./utils.js";
 
 export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
     const unionOp_ = findFirstOpOfTypeNotRoot2<Algebra.Union>(Algebra.types.UNION, query);
@@ -34,8 +38,8 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
         } catch (err) {
             // Slow to 'fail' decomposition, but faster happy path since initial checks are avoided
             assert(
-                err instanceof UnsupportedSPARQLOpError,
-                `Unexpected error occurred during decomposition process: ${String(err)}`,
+                err instanceof UnsupportedAlgebraElement,
+                `Unexpected error occurred during decomposition process: ${JSON.stringify(err, null, 2)}`,
             );
             return origQuery;
         }
@@ -76,10 +80,10 @@ const BINARY_OPS_TYPES_ANY_DISTR_TYPES = [...BINARY_OPS_DISTR_TYPES, ...BINARY_O
 export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Algebra.Union | null {
     {
         // Check if union operator occurs in left-hand side operand of operator type present in `BINARY_OPS_LEFT_DISTR_TYPES`
-        let op: QueryNode<OpWithInput> = unionOp;
+        let op: QueryNode<Algebra.Operation> = unionOp;
         while (op.parent !== null) {
             const parentOp = op.parent.value.value;
-            if (BINARY_OPS_LEFT_DISTR_TYPES.includes(parentOp.type) && op.parent.childIdx === 1) {
+            if (Algebra.isOneOfOpTypes(parentOp, BINARY_OPS_LEFT_DISTR_TYPES) && op.parent.childIdx === 1) {
                 // Cannot move union operator all the way to the top, so do not move it at all!
                 return null;
             }
@@ -91,18 +95,18 @@ export function moveUnionToTop(unionOp: QueryNodeWithParent<Algebra.Union>): Alg
         const parentOp = unionOp.parent.value.value;
 
         let newOp: Algebra.Union;
-        if (UNARY_OPERATOR_TYPES.includes(parentOp.type)) {
-            newOp = liftSeqOfBinaryAboveUnary(parentOp as UnaryOp, unionOp.value);
-        } else if (BINARY_OPS_TYPES_ANY_DISTR_TYPES.includes(parentOp.type)) {
-            newOp = liftSeqOfBinaryAboveBinary(parentOp as BinaryOp, unionOp.value);
-        } else if (parentOp.type === Algebra.types.UNION) {
+        if (Algebra.isOneOfOpTypes(parentOp, BINARY_OPS_TYPES_ANY_DISTR_TYPES)) {
+            newOp = liftSeqOfBinaryAboveBinary(parentOp, unionOp.value);
+        } else if (Algebra.isOneOfOpTypes(parentOp, UNARY_OPERATOR_TYPES)) {
+            newOp = liftSeqOfBinaryAboveUnary(parentOp, unionOp.value);
+        } else {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            assert(parentOp.type === Algebra.types.UNION);
             // Associative property of the union operator
             const childIdx = parentOp.input.indexOf(unionOp.value);
             assert(childIdx !== -1);
             parentOp.input.splice(childIdx, 1, ...unionOp.value.input); // Replace the child with its inputs
             newOp = parentOp;
-        } else {
-            throw new UnsupportedSPARQLOpError(parentOp);
         }
 
         const parentParent = unionOp.parent.value.parent;

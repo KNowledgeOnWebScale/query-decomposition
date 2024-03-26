@@ -17,11 +17,19 @@ PREFIX : <http://example.com/ns#>
 
 SELECT * WHERE {
     {
-        {?s :l1 ?l1}
-        UNION 
-        {?s :l3 ?l3}
-        UNION
-        {?s :l4 ?l4}
+        SELECT * WHERE {
+            ?s :label1 ?label1.
+            { ?s :label2 ?label2 . FILTER(strlen(?label2) > 0) }
+            ?s :labelA ?label
+        }
+    }
+    UNION
+    {
+        SELECT * WHERE {
+            ?s :label1 ?label1.
+            { ?s :label2 ?label2 . FILTER(strlen(?label2) > 0) }
+            ?s :labelB ?label
+        }
     }
 }`;
 const tq3 = translate(q2);
