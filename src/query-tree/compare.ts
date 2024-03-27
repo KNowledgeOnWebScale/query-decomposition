@@ -1,6 +1,7 @@
 import hash from "object-hash";
 
 import * as Algebra from "./algebra.js";
+import { inScopeVariables } from "./utils.js";
 
 function areUnorderedEqual<T>(a: T[], b: T[], compareElementsCb: (x: T, y: T) => boolean) {
     return a.length === b.length && a.every(x => b.some(y => compareElementsCb(x, y)));
@@ -15,16 +16,25 @@ export function areEqualOps(a: Algebra.Operand, b_: Algebra.Operand): boolean {
         return false;
     }
 
+    const hashObj = (x: hash.NotUndefined) => hash(x, { respectType: false });
+
     // Compare hashes of objects that have to match exactly
-    const hashOrUndefined = (x: hash.NotUndefined | undefined) => (x !== undefined ? hash(x) : x);
+    const hashObjOrUndef = (x: hash.NotUndefined | undefined) => (x !== undefined ? hashObj(x) : x);
 
     // Type narrowing doesn't currently affect the shared generic
     switch (a.type) {
         case Algebra.types.PROJECT: {
             const b = b_ as Algebra.Project;
 
+            const aInScopeVariables = new Set(inScopeVariables(a).map(hashObj));
+            const aSelectedInScopeVariables = a.variables.map(hashObj).filter(x => aInScopeVariables.has(x));
+
+            const bInScopeVariables = new Set(inScopeVariables(b).map(hashObj));
+            const bSelectedInScopeVariables = b.variables.map(hashObj).filter(x => bInScopeVariables.has(x));
+
             return (
-                areUnorderedEqual(a.variables, b.variables, (a, b) => hash(a) === hash(b)) &&
+                // Unbound variables do not affect the query result
+                areUnorderedEqual(aSelectedInScopeVariables, bSelectedInScopeVariables, (x, y) => x === y) &&
                 areEqualOps(a.input, b.input)
             );
         }
@@ -38,7 +48,7 @@ export function areEqualOps(a: Algebra.Operand, b_: Algebra.Operand): boolean {
             const b = b_ as Algebra.LeftJoin;
 
             return (
-                hashOrUndefined(a.expression) === hashOrUndefined(b.expression) &&
+                hashObjOrUndef(a.expression) === hashObjOrUndef(b.expression) &&
                 areOrderedEqual(a.input, b.input, areEqualOps)
             );
         }
@@ -50,12 +60,12 @@ export function areEqualOps(a: Algebra.Operand, b_: Algebra.Operand): boolean {
         case Algebra.types.BGP: {
             const b = b_ as Algebra.Bgp;
 
-            return areUnorderedEqual(a.patterns, b.patterns, (a, b) => hash(a) === hash(b));
+            return areUnorderedEqual(a.patterns, b.patterns, (a, b) => hashObj(a) === hashObj(b));
         }
         case Algebra.types.FILTER: {
             const b = b_ as Algebra.Filter;
 
-            return hash(a.expression) === hash(b.expression) && areEqualOps(a.input, b.input);
+            return hashObj(a.expression) === hashObj(b.expression) && areEqualOps(a.input, b.input);
         }
     }
 }

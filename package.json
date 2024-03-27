@@ -19,6 +19,7 @@
     "devDependencies": {
         "@golevelup/ts-jest": "^0.4.0",
         "@jest/globals": "^29.7.0",
+        "@rdfjs/types": "^1.1.0",
         "@types/debug": "^4.1.12",
         "@types/node": "^20.11.30",
         "@types/object-hash": "^3.0.6",

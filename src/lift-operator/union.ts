@@ -29,11 +29,11 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
     do {
         try {
             const newQuery_ = moveUnionToTop(unionOp);
-            if (newQuery_ === null) {
+            if (newQuery_ !== null) {
+                newQuery = newQuery_;
+            } else {
                 skipUnions.push(unionOp.value);
                 newQuery = getTopLevelOp(unionOp.parent.value);
-            } else {
-                newQuery = newQuery_;
             }
         } catch (err) {
             // Slow to 'fail' decomposition, but faster happy path since initial checks are avoided

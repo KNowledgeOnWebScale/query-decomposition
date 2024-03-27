@@ -16,6 +16,15 @@ export function liftSeqOfBinaryAboveUnary<U extends Algebra.UnaryOp, B extends A
     return { ...structuredClone(childBinary), input: newSubOps };
 }
 
+function replaceChildAtIdx(parent: Algebra.MultiOp, childIdx: number, newChild: Algebra.Operand) {
+    if (parent.type === Algebra.types.JOIN && newChild.type === Algebra.types.JOIN) {
+        // Associative property
+        parent.input.splice(childIdx, 1, ...structuredClone(newChild.input));
+    } else {
+        parent.input.splice(childIdx, 1, structuredClone(newChild));
+    }
+}
+
 export function liftSeqOfBinaryAboveBinary<
     B1 extends Algebra.BinaryOp | Algebra.MultiOp,
     B2 extends Algebra.BinaryOp | Algebra.MultiOp,
@@ -25,13 +34,13 @@ export function liftSeqOfBinaryAboveBinary<
     const childIdx = parentBinary.input.indexOf(childBinary);
 
     const newSubOp1 = structuredClone(parentBinary);
-    newSubOp1.input.splice(childIdx, 1, structuredClone(childBinary.input[0]));
+    replaceChildAtIdx(newSubOp1, childIdx, childBinary.input[0]);
 
     const newSubOp2 = structuredClone(parentBinary);
     if (childBinary.input.length === 2) {
-        newSubOp2.input.splice(childIdx, 1, structuredClone(childBinary.input[1]));
+        replaceChildAtIdx(newSubOp2, childIdx, structuredClone(childBinary.input[1]));
     } else {
-        newSubOp2.input.splice(childIdx, 1, {
+        replaceChildAtIdx(newSubOp2, childIdx, {
             ...structuredClone(childBinary),
             input: structuredClone(childBinary.input.slice(1)),
         });

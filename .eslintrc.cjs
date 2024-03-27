@@ -53,6 +53,7 @@ module.exports = {
         "@typescript-eslint/no-unnecessary-condition": ["error", { allowConstantLoopConditions: true }],
         "@typescript-eslint/prefer-readonly": "error",
         "@typescript-eslint/strict-boolean-expressions": "error",
+        "@typescript-eslint/unbound-method": [ "error", { "ignoreStatic": true }],
         "import/order": [
             "error",
             {

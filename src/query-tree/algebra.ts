@@ -83,4 +83,4 @@ export function isOneOfOpTypes<U extends keyof OpTypeMapping>(
     return opTypes.includes(op.type);
 }
 
-type Hashable = hash.NotUndefined;
+export type Hashable = hash.NotUndefined;

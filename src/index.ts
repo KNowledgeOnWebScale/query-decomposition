@@ -1,8 +1,7 @@
 import { strict as assert } from "assert";
 
 import { Algebra } from "./query-tree/index.js";
-import { toSparql, translate } from "./query-tree/translate.js";
-import { prettyPrintJSON } from "./utils.js";
+import { translate } from "./query-tree/translate.js";
 
 // const q = `
 // PREFIX : <http://example.com/ns#>
@@ -14,29 +13,26 @@ import { prettyPrintJSON } from "./utils.js";
 
 const q2 = `
 PREFIX : <http://example.com/ns#>
-
 SELECT * WHERE {
-    {
-        SELECT * WHERE {
-            ?s :label1 ?label1.
-            { ?s :label2 ?label2 . FILTER(strlen(?label2) > 0) }
-            ?s :labelA ?label
-        }
-    }
-    UNION
-    {
-        SELECT * WHERE {
-            ?s :label1 ?label1.
-            { ?s :label2 ?label2 . FILTER(strlen(?label2) > 0) }
-            ?s :labelB ?label
-        }
-    }
+        { ?s :labelA ?label } UNION { ?s :labelB ?label }   
+        FILTER(?a)
 }`;
 const tq3 = translate(q2);
 assert(tq3.type === Algebra.types.PROJECT);
 
-prettyPrintJSON(tq3);
-console.log(toSparql(tq3));
+// Handle Algebra.types.NOP by returning nothing?
+
+console.debug(JSON.stringify(tq3, null, 4));
+// console.log(toSparql(tq3));
+
+// const factory = new Factory();
+// const counter = 0;
+// const prefixIri = "x#"
+
+// const t = <RDF.Variable>factory.createTerm("s")
+// console.log(t);
+// const ret = factory.createPattern(factory.createTerm("?s"), factory.createTerm(`${prefixIri}l${counter}`), factory.createTerm(`${prefixIri}o${counter}`))
+// console.log(ret)
 
 // assert(tq2.type == Algebra.types.PROJECT);
 // const f = moveUnionsToTop(tq2);
