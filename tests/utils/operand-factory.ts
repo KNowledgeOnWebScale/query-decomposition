@@ -4,7 +4,7 @@ import type { Hashable } from "../../src/query-tree/algebra.js";
 import { Algebra } from "../../src/query-tree/index.js";
 import { _translate, reverseTranslate } from "../../src/query-tree/translate.js";
 
-export type CreateMultiOp<O extends Algebra.MultiOp> = (...operands: O["input"]) => O;
+export type CreateMultiOp<O extends Algebra.BinaryOrMoreOp> = (...operands: O["input"]) => O;
 
 export class OperandFactory {
     private counter = 0;

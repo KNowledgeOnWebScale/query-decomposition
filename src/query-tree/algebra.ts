@@ -35,7 +35,8 @@ export type BinaryOp = Extract<Operation, Binary>;
 interface Multi extends BaseOperation {
     input: ArrayMinLength<Operand, 2>;
 }
-export type MultiOp = Extract<Operation, Multi>;
+export type BinaryOrMoreOp = Extract<Operation, Multi>;
+export type TernaryOrMoreOp = Exclude<BinaryOrMoreOp, BinaryOp>;
 
 export interface Project extends Unary {
     type: types.PROJECT;

@@ -3,10 +3,10 @@ import { strict as assert } from "assert";
 import { Algebra } from "../query-tree/index.js";
 import type { ArrayMinLength } from "../utils.js";
 
-export function liftSeqOfBinaryAboveUnary<U extends Algebra.UnaryOp, B extends Algebra.BinaryOp | Algebra.MultiOp>(
-    parentUnary: U,
-    childBinary: B,
-): B {
+export function liftSeqOfBinaryAboveUnary<
+    U extends Algebra.UnaryOp,
+    B extends Algebra.BinaryOp | Algebra.BinaryOrMoreOp,
+>(parentUnary: U, childBinary: B): B {
     assert(parentUnary.input === childBinary);
 
     const newSubOps = childBinary.input.map(subOp => {
@@ -16,7 +16,7 @@ export function liftSeqOfBinaryAboveUnary<U extends Algebra.UnaryOp, B extends A
     return { ...structuredClone(childBinary), input: newSubOps };
 }
 
-function replaceChildAtIdx(parent: Algebra.MultiOp, childIdx: number, newChild: Algebra.Operand) {
+function replaceChildAtIdx(parent: Algebra.BinaryOrMoreOp, childIdx: number, newChild: Algebra.Operand) {
     if (parent.type === Algebra.types.JOIN && newChild.type === Algebra.types.JOIN) {
         // Associative property
         parent.input.splice(childIdx, 1, ...structuredClone(newChild.input));
@@ -26,8 +26,8 @@ function replaceChildAtIdx(parent: Algebra.MultiOp, childIdx: number, newChild: 
 }
 
 export function liftSeqOfBinaryAboveBinary<
-    B1 extends Algebra.BinaryOp | Algebra.MultiOp,
-    B2 extends Algebra.BinaryOp | Algebra.MultiOp,
+    B1 extends Algebra.BinaryOp | Algebra.BinaryOrMoreOp,
+    B2 extends Algebra.BinaryOp | Algebra.BinaryOrMoreOp,
 >(parentBinary: B1, childBinary: B2): B2 {
     assert(parentBinary.input.includes(childBinary));
 

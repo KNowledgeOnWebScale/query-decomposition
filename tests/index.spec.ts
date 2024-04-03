@@ -62,7 +62,7 @@ it("Lifts a union over final projection and filter", () => {
 });
 
 describe("Lifts a left-hand side union over final projection and", () => {
-    function expectOpDistributesUnion<O extends Algebra.MultiOp>(createOp: CreateMultiOp<O>) {
+    function expectOpDistributesUnion<O extends Algebra.BinaryOrMoreOp>(createOp: CreateMultiOp<O>) {
         expectQueryEquivalence3((f, A, B, C) => {
             return {
                 input: createOp(F.createUnion(A, B), C),

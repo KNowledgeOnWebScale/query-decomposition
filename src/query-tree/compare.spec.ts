@@ -11,12 +11,11 @@ import {
 } from "../../tests/utils/index.js";
 import { OperandFactory as F, type CreateMultiOp } from "../../tests/utils/operand-factory.js";
 
-import type { BinaryOp } from "./algebra.js";
 import { toSparql, translate } from "./translate.js";
 
 import { Algebra } from "./index.js";
 
-type createMultiOp = (...operands: Algebra.BinaryOp["input"]) => Algebra.MultiOp;
+type createMultiOp = (...operands: Algebra.BinaryOp["input"]) => Algebra.BinaryOrMoreOp;
 
 function checkCommutative(
     createOp: createMultiOp,
@@ -74,7 +73,7 @@ function expectNotAssociative(createOp: createMultiOp) {
 }
 
 const binaryOps: {
-    [K in Algebra.MultiOp["type"]]: {
+    [K in Algebra.BinaryOrMoreOp["type"]]: {
         name: string;
         createOp: CreateMultiOp<Algebra.OpTypeMapping[K]>;
         commutative: boolean;
@@ -182,6 +181,38 @@ describe("BGP", () => {
             return {
                 input: t,
                 expected: t2,
+            };
+        });
+    });
+});
+
+// Need at least 3 operands for count-sensitivity, since we need to reduce the number of operands by at least one
+// and 2 is the smallest number of operands that any operator takes who also takes 3 (n + 1) operands
+
+// Technically Union(A, A, B) = Union(A, B) = Union(A, B, B)
+// However since we never create rewrites like this, we don't take this into account
+describe("Operand comparison is count-sensitive for ternary or more operators", () => {
+    const ternaryOrMoreOps: {
+        [K in Algebra.TernaryOrMoreOp["type"]]: {
+            name: string;
+            createOp: CreateMultiOp<Algebra.OpTypeMapping[K]>;
+        };
+    } = {
+        [Algebra.types.JOIN]: {
+            name: "Join",
+            createOp: F.createJoin,
+        },
+        [Algebra.types.UNION]: {
+            name: "Union",
+            createOp: F.createUnion,
+        },
+    };
+
+    test.each(Object.values(ternaryOrMoreOps))("$name", ternaryOrMoreOp => {
+        expectNotQueryBodyEquivalence((f, A, B) => {
+            return {
+                input: ternaryOrMoreOp.createOp(A, A, B),
+                expected: ternaryOrMoreOp.createOp(A, B, B),
             };
         });
     });
