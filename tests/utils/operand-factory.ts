@@ -7,7 +7,7 @@ import type { Hashable } from "../../src/query-tree/utils.js";
 export type CreateMultiOp<O extends Algebra.BinaryOrMoreOp> = (...operands: O["input"]) => O;
 
 export class OperandFactory {
-    private counter = 0;
+    private id = 0;
     private readonly prefixIri = "http://example.com/ns#";
     factory = new Factory();
 
@@ -17,11 +17,11 @@ export class OperandFactory {
             patterns.push(
                 this.factory.createPattern(
                     this.factory.createTerm("?s"),
-                    this.factory.createTerm(`${this.prefixIri}l${this.counter}`),
-                    this.factory.createTerm(`${this.prefixIri}o${this.counter}`),
+                    this.factory.createTerm(`${this.prefixIri}l${this.id}`),
+                    this.factory.createTerm(`${this.prefixIri}o${this.id}`),
                 ),
             );
-            this.counter += 1;
+            this.id += 1;
         }
         const bgp = this.factory.createBgp(patterns);
         return _translate(bgp) as Algebra.Bgp;
@@ -36,8 +36,8 @@ export class OperandFactory {
     }
 
     createExpression(term_?: string) {
-        const term = term_ ?? `?f${this.counter}`;
-        this.counter += 1;
+        const term = term_ ?? `?f${this.id}`;
+        this.id += 1;
         return this.factory.createTermExpression(this.factory.createTerm(term));
     }
 
