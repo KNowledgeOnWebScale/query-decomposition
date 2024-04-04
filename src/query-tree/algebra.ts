@@ -1,49 +1,19 @@
-import hash from "object-hash";
-
 import type { ArrayMinLength, SingleType } from "../utils.js";
 
-export enum types {
-    PROJECT = "project",
-    UNION = "union",
-    MINUS = "minus",
-    JOIN = "join",
-    LEFT_JOIN = "left_join",
-    FILTER = "filter",
-    BGP = "bgp",
-}
-
-export interface BaseOperation {
-    type: types;
-}
+import type { Hashable } from "./utils.js";
 
 export type Operation = Project | Union | Minus | Join | LeftJoin | Filter;
 export type Operand = Operation | Bgp;
 export type OpTypeMapping = {
-    [K in types]: SingleType<Extract<Operation, { type: K }>>;
+    [K in Operation["type"]]: SingleType<Extract<Operation, { type: K }>>;
 };
-
-interface Unary extends BaseOperation {
-    input: Operand;
-}
-export type UnaryOp = Extract<Operation, Unary>;
-
-interface Binary extends BaseOperation {
-    input: [Operand, Operand];
-}
-export type BinaryOp = Extract<Operation, Binary>;
-
-interface Multi extends BaseOperation {
-    input: ArrayMinLength<Operand, 2>;
-}
-export type BinaryOrMoreOp = Extract<Operation, Multi>;
-export type TernaryOrMoreOp = Exclude<BinaryOrMoreOp, BinaryOp>;
 
 export interface Project extends Unary {
     type: types.PROJECT;
     variables: Hashable[];
 }
 
-export interface Union extends Multi {
+export interface Union extends BinaryOrMore {
     type: types.UNION;
 }
 
@@ -51,7 +21,7 @@ export interface Minus extends Binary {
     type: types.MINUS;
 }
 
-export interface Join extends Multi {
+export interface Join extends BinaryOrMore {
     type: types.JOIN;
 }
 
@@ -70,6 +40,36 @@ export interface Bgp extends BaseOperation {
     patterns: Hashable[];
 }
 
+export interface BaseOperation {
+    type: types;
+}
+
+export enum types {
+    PROJECT = "project",
+    UNION = "union",
+    MINUS = "minus",
+    JOIN = "join",
+    LEFT_JOIN = "left_join",
+    FILTER = "filter",
+    BGP = "bgp",
+}
+
+interface Unary extends BaseOperation {
+    input: Operand;
+}
+export type UnaryOp = Extract<Operation, Unary>;
+
+interface Binary extends BaseOperation {
+    input: [Operand, Operand];
+}
+export type BinaryOp = Extract<Operation, Binary>;
+
+interface BinaryOrMore extends BaseOperation {
+    input: ArrayMinLength<Operand, 2>;
+}
+export type BinaryOrMoreOp = Extract<Operation, BinaryOrMore>;
+export type TernaryOrMoreOp = Exclude<BinaryOrMoreOp, BinaryOp>;
+
 //
 // Type Guards
 //
@@ -83,5 +83,3 @@ export function isOneOfOpTypes<U extends keyof OpTypeMapping>(
 ): op is OpTypeMapping[U] {
     return opTypes.includes(op.type);
 }
-
-export type Hashable = hash.NotUndefined;

@@ -1,8 +1,8 @@
 import { Factory, Util } from "sparqlalgebrajs";
 
-import type { Hashable } from "../../src/query-tree/algebra.js";
 import { Algebra } from "../../src/query-tree/index.js";
 import { _translate, reverseTranslate } from "../../src/query-tree/translate.js";
+import type { Hashable } from "../../src/query-tree/utils.js";
 
 export type CreateMultiOp<O extends Algebra.BinaryOrMoreOp> = (...operands: O["input"]) => O;
 
