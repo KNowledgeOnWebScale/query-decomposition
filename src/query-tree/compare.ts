@@ -42,7 +42,7 @@ export function areEqualOps(a: Algebra.Operand, b_: Algebra.Operand): boolean {
     // Compare hashes of objects that have to match exactly
     const hashObjOrUndef = (x: hash.NotUndefined | undefined) => (x !== undefined ? hashObj(x) : x);
 
-    // Type narrowing doesn't currently affect the shared generic
+    // Type narrowing doesn't currently affect shared generics
     switch (a.type) {
         case Algebra.types.PROJECT: {
             const b = b_ as Algebra.Project;
@@ -78,15 +78,15 @@ export function areEqualOps(a: Algebra.Operand, b_: Algebra.Operand): boolean {
 
             return areOrderedEqual(a.input, b.input, areEqualOps);
         }
-        case Algebra.types.BGP: {
-            const b = b_ as Algebra.Bgp;
-
-            return areUnorderedEqual(a.patterns, b.patterns, (a, b) => hashObj(a) === hashObj(b));
-        }
         case Algebra.types.FILTER: {
             const b = b_ as Algebra.Filter;
 
             return hashObj(a.expression) === hashObj(b.expression) && areEqualOps(a.input, b.input);
+        }
+        case Algebra.types.BGP: {
+            const b = b_ as Algebra.Bgp;
+
+            return areUnorderedEqual(a.patterns, b.patterns, (a, b) => hashObj(a) === hashObj(b));
         }
     }
 }

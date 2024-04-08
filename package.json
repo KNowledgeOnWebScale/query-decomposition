@@ -6,10 +6,10 @@
     "main": "src/index.js",
     "scripts": {
         "start": "node --loader ts-node/esm src/index.ts",
-        "start:debug": "node --loader ts-node/esm --inspect-brk src/index.ts",
+        "start:debug": "DEBUG=move-sparql-unions-to-top:* node --loader ts-node/esm --inspect-brk src/index.ts",
         "tests": "jest",
-        "tests:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
-        "prepare": "husky"
+        "tests:debug": "DEBUG=move-sparql-unions-to-top:* node --inspect-brk node_modules/.bin/jest --runInBand",
+        "prepare": "husky install"
     },
     "dependencies": {
         "denque": "^2.1.0",

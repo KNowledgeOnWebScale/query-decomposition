@@ -5,7 +5,7 @@ import path from "node:path";
 import { expect } from "@jest/globals";
 import createDebug from "debug";
 
-import { name, name as packageName } from "../../package.json";
+import { name as packageName } from "../../package.json";
 import { areEqualOps } from "../../src/query-tree/compare.js";
 import { Algebra } from "../../src/query-tree/index.js";
 import { toSparql } from "../../src/query-tree/translate.js";
@@ -60,12 +60,13 @@ export function expectNotQueryBodyEquivalence(
     expectQueriesToNotBeEquivalent(F.createProject(input), F.createProject(expected), qt);
 }
 
+const debug = createDebug(`${packageName}:query-equivalence`);
+
 export function expectNotQueriesEquivalence(input: Algebra.Project, expected: Algebra.Project, cb?: QueryTransformer) {
     const found = cb !== undefined ? cb(input) : input;
 
-    const debug = createDebug(`${name}:query-equivalence`);
-    debug(toSparql(found));
-    debug(toSparql(expected));
+    debug("found:", toSparql(found));
+    debug("expected:", toSparql(expected));
 
     if (!areEqualOps(found, expected)) {
         // This comparison is order sensitive, while the above one is correctly not...
@@ -95,9 +96,8 @@ export function expectQueriesToNotBeEquivalent(
 ) {
     const found = qt !== undefined ? qt(input) : input;
 
-    const debug = createDebug(`${name}:query-equivalence`);
-    debug(toSparql(found));
-    debug(toSparql(expected));
+    debug("found:", toSparql(found));
+    debug("expected:", toSparql(expected));
 
     if (areEqualOps(found, expected)) {
         // const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), packageName));
