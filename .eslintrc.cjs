@@ -50,6 +50,7 @@ module.exports = {
             { vars: "all", varsIgnorePattern: "^_", args: "after-used", argsIgnorePattern: "^_" },
         ],
         "@typescript-eslint/no-explicit-any": "error",
+        "@typescript-eslint/no-non-null-assertion": "off",
         "@typescript-eslint/no-unnecessary-condition": ["error", { allowConstantLoopConditions: true }],
         "@typescript-eslint/prefer-readonly": "error",
         "@typescript-eslint/strict-boolean-expressions": "error",

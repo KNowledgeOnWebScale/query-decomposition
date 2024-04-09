@@ -16,9 +16,10 @@
         "strict": true,
         "useDefineForClassFields": true,
         "strictNullChecks": true,
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        "noUncheckedIndexedAccess": true
     },
-    "include": ["src/**/*", "tests/**/*", "package.json", "testSetup.ts"],
+    "include": ["src/**/*", "tests/**/*", "package.json"],
     "ts-node": {
         "experimentalSpecifierResolution": "node",
         // Skip typechecking

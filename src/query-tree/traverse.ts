@@ -27,10 +27,10 @@ export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
     while (node !== undefined && nextChildToVisitIdx !== undefined) {
         const nodeOp = node.value;
 
-        let nextToVisit = null;
+        let nextToVisit: Algebra.Operand | null = null;
         if (Array.isArray(nodeOp.input)) {
             if (nextChildToVisitIdx < nodeOp.input.length) {
-                nextToVisit = nodeOp.input[nextChildToVisitIdx];
+                nextToVisit = nodeOp.input[nextChildToVisitIdx]!;
             }
         } else {
             if (nextChildToVisitIdx === 0) {

@@ -29,7 +29,7 @@ function areUnorderedEqual<T>(a: readonly T[], b: readonly T[], compareElementsC
 }
 
 function areOrderedEqual<T>(a: T[], b: T[], compareElementsCb: (x: T, y: T) => boolean) {
-    return a.length === b.length && a.every((x, idx) => compareElementsCb(x, b[idx]));
+    return a.length === b.length && a.every((x, idx) => compareElementsCb(x, b[idx]!));
 }
 
 export function areEqualOps(a: Algebra.Operand, b_: Algebra.Operand): boolean {

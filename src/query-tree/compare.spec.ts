@@ -177,7 +177,7 @@ describe("BGP", () => {
     test("Order of triples is irrelevant", () => {
         expectQueryBodyEquivalence(f => {
             const t = f.createBgp(2);
-            const t2 = { ...structuredClone(t), patterns: [t.patterns[1], t.patterns[0]] };
+            const t2 = { ...structuredClone(t), patterns: [t.patterns[1]!, t.patterns[0]!] };
             return {
                 input: t,
                 expected: t2,

@@ -1,8 +1,10 @@
 import { Factory, Util } from "sparqlalgebrajs";
+import type { Pattern } from "sparqlalgebrajs/lib/algebra.js";
 
 import { Algebra } from "../../src/query-tree/index.js";
 import { _translate, reverseTranslate } from "../../src/query-tree/translate.js";
 import type { Hashable } from "../../src/query-tree/utils.js";
+import type { ArrayMinLength } from "../../src/utils.js";
 
 export type CreateMultiOp<O extends Algebra.BinaryOrMoreOp> = (...operands: O["input"]) => O;
 
@@ -12,7 +14,7 @@ export class OperandFactory {
     factory = new Factory();
 
     createBgp(patterCount = 1): Algebra.Bgp {
-        const patterns = [];
+        const patterns = new Array<Pattern>();
         for (let i = 0; i < patterCount; i += 1) {
             patterns.push(
                 this.factory.createPattern(
@@ -27,12 +29,12 @@ export class OperandFactory {
         return _translate(bgp) as Algebra.Bgp;
     }
 
-    createBgps(count: number) {
-        const ret = [];
+    createBgps<N extends number>(count: N): ArrayMinLength<Algebra.Bgp, N> {
+        const ret = new Array<Algebra.Bgp>();
         for (let i = 0; i < count; i += 1) {
             ret.push(this.createBgp());
         }
-        return ret;
+        return ret as ArrayMinLength<Algebra.Bgp, N>;
     }
 
     createExpression(term_?: string) {

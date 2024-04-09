@@ -28,8 +28,7 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
             skipUnions.add(newQuery_); // Skip top-level unions
         } else {
             skipUnions.add(unionOpWAncestors.value.value);
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            newQuery = unionOpWAncestors.ancestors[0].value;
+            newQuery = unionOpWAncestors.ancestors[0]!.value;
         }
         debug(
             toSparql({
@@ -75,7 +74,6 @@ export function moveUnionToTop(unionOpWAncestors: QueryNodeWithAncestors<Algebra
 
     let unionOp = unionOpWAncestors.value.value;
     while (true) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const parentOp = unionOpWAncestors.ancestors.pop()!.value;
 
         let newOp: Algebra.Union;
