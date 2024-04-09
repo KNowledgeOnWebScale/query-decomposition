@@ -17,7 +17,7 @@ it("Does not modify a query with no union operations", () => {
         return {
             input: F.createLeftJoin(F.createJoin(A, B), C),
         };
-    });
+    }, moveUnionsToTop);
 });
 
 // eslint-disable-next-line jest/no-commented-out-tests
@@ -143,5 +143,44 @@ it("Flattens joins during decomposition", () => {
             input,
             expectedSubqueries: [F.createJoin(A, B, E), F.createJoin(C, D, E)],
         };
+    });
+});
+
+describe("Complex queries with unions that cannot be moved", () => {
+    it("Multiple unions indirectly in RHS of minus", () => {
+        expectQueryEquivalence3((f, A, B, C, D, E, G, H) => {
+            const exprA = f.createExpression();
+            return {
+                input: F.createJoin(
+                    A,
+                    F.createMinus(
+                        F.createUnion(B, C),
+                        F.createJoin(F.createUnion(D, E), F.createFilter(F.createUnion(G, H), exprA)),
+                    ),
+                ),
+                expectedSubqueries: [
+                    F.createJoin(
+                        A,
+                        F.createMinus(B, F.createJoin(F.createUnion(D, E), F.createFilter(F.createUnion(G, H), exprA))),
+                    ),
+                    F.createJoin(
+                        A,
+                        F.createMinus(C, F.createJoin(F.createUnion(D, E), F.createFilter(F.createUnion(G, H), exprA))),
+                    ),
+                ],
+            };
+        });
+    });
+    it("Immovable union and later in the tree movable union", () => {
+        expectQueryEquivalence3((f, A, B, C, D, E) => {
+            const exprA = f.createExpression();
+            return {
+                input: F.createJoin(F.createMinus(A, F.createFilter(F.createUnion(B, C), exprA)), F.createUnion(D, E)),
+                expectedSubqueries: [
+                    F.createJoin(F.createMinus(A, F.createFilter(F.createUnion(B, C), exprA)), D),
+                    F.createJoin(F.createMinus(A, F.createFilter(F.createUnion(B, C), exprA)), E),
+                ],
+            };
+        });
     });
 });

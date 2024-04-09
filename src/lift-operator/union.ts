@@ -73,11 +73,14 @@ const BINARY_OPS_LEFT_DISTR_TYPES = [Algebra.types.LEFT_JOIN, Algebra.types.MINU
 const BINARY_OPS_TYPES_ANY_DISTR_TYPES = [...BINARY_OPS_DISTR_TYPES, ...BINARY_OPS_LEFT_DISTR_TYPES] as const;
 
 export function moveUnionToTop(unionOpWAncestors: QueryNodeWithAncestors<Algebra.Union>): Algebra.Union {
-    // Check if union operator occurs in left-hand side operand of operator type present in `BINARY_OPS_LEFT_DISTR_TYPES`
-    for (const ancestor of unionOpWAncestors.ancestors) {
-        if (Algebra.isOneOfOpTypes(ancestor.value, BINARY_OPS_LEFT_DISTR_TYPES) && ancestor.parentIdx === 1) {
+    // Check if union operation occurs in right-hand side operand of an operator present in `BINARY_OPS_LEFT_DISTR_TYPES`
+    const check = unionOpWAncestors.ancestors.slice();
+    check.push(unionOpWAncestors.value);
+    for (let i = 0; i < check.length - 1; i++) {
+        const a = check[i]!.value;
+        if (Algebra.isOneOfOpTypes(a, BINARY_OPS_LEFT_DISTR_TYPES) && check[i + 1]!.parentIdx === 1) {
             // Cannot move union operator all the way to the top, so do not move it at all!
-            throw new BadNodeError(ancestor.value);
+            throw new BadNodeError(a);
         }
     }
 
