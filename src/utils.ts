@@ -1,3 +1,5 @@
+import hash from "object-hash";
+
 export function prettyPrintJSON(value: unknown) {
     console.debug(JSON.stringify(value, null, 2));
 }
@@ -14,3 +16,23 @@ export function hasLengthAtLeast<T, L extends number>(arr: T[], length: L): arr 
 
 export type SingleType<T, U extends T = T> = T extends unknown ? ([U] extends [T] ? T : never) : T;
 // https://stackoverflow.com/questions/53953814/typescript-check-if-a-type-is-a-union
+
+export function hashObj(v: hash.NotUndefined) {
+    return hash(v, { respectType: false });
+}
+
+export function hashObjOrUndef(v: hash.NotUndefined | undefined) {
+    return v !== undefined ? hashObj(v) : v;
+}
+
+export class SetC<T extends hash.NotUndefined> {
+    private readonly set = new Set<string>();
+
+    add(value: T) {
+        this.set.add(hashObj(value));
+    }
+
+    has(value: T) {
+        return this.set.has(hashObj(value));
+    }
+}

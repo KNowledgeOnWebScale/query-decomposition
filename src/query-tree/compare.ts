@@ -1,4 +1,4 @@
-import hash from "object-hash";
+import { hashObj, hashObjOrUndef } from "../utils.js";
 
 import * as Algebra from "./algebra.js";
 import { inScopeVariables } from "./utils.js";
@@ -36,11 +36,6 @@ export function areEqualOps(a: Algebra.Operand, b_: Algebra.Operand): boolean {
     if (a.type !== b_.type) {
         return false;
     }
-
-    const hashObj = (x: hash.NotUndefined) => hash(x, { respectType: false });
-
-    // Compare hashes of objects that have to match exactly
-    const hashObjOrUndef = (x: hash.NotUndefined | undefined) => (x !== undefined ? hashObj(x) : x);
 
     // Type narrowing doesn't currently affect shared generics
     switch (a.type) {

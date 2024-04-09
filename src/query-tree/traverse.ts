@@ -1,3 +1,5 @@
+import { SetC } from "../utils.js";
+
 import { Algebra } from "./index.js";
 
 export interface QueryNode<T extends Algebra.Operand> {
@@ -13,7 +15,7 @@ export interface QueryNodeWithAncestors<V extends Algebra.Operand> {
     value: QueryNode<V>;
 }
 
-interface State {
+export interface TraversalState {
     path: QueryNode<Algebra.Operation>[];
     pathNextChildToVisitIdx: number[];
 }
@@ -21,17 +23,27 @@ interface State {
 export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
     opType: K,
     root: Algebra.Operation,
-    ignoredNodes = new Set<Algebra.Operation>(),
-    state?: State,
-): [QueryNodeWithAncestors<Algebra.OpTypeMapping[K]>, State] | null {
+    ignoredSubTrees = new SetC<Algebra.Operation>(),
+    ignoredNodes = new SetC<Algebra.Operation>(),
+    state?: TraversalState,
+): [QueryNodeWithAncestors<Algebra.OpTypeMapping[K]>, TraversalState] | null {
     // Keep state needed for traversal separate, so we can directly return the ancestors
     const path = state?.path ?? [{ value: root, parentIdx: null }];
     const pathNextChildToVisitIdx = state?.pathNextChildToVisitIdx ?? [0];
 
     let node = path.at(-1);
     let nextChildToVisitIdx = pathNextChildToVisitIdx.at(-1);
-    while (node !== undefined && nextChildToVisitIdx !== undefined) {
+    while (path.length > 0 && pathNextChildToVisitIdx.length > 0) {
+        node = path.at(-1)!;
+        nextChildToVisitIdx = pathNextChildToVisitIdx.at(-1)!;
+
         const nodeOp = node.value;
+
+        if (ignoredSubTrees.has(nodeOp)) {
+            path.pop();
+            pathNextChildToVisitIdx.pop();
+            continue;
+        }
 
         let nextToVisit: Algebra.Operand | null = null;
         if (Array.isArray(nodeOp.input)) {
@@ -60,9 +72,6 @@ export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
                 ];
             }
         }
-
-        node = path.at(-1);
-        nextChildToVisitIdx = pathNextChildToVisitIdx.at(-1);
     }
 
     return null;

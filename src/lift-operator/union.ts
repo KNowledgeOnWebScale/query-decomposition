@@ -5,7 +5,8 @@ import createDebug from "debug";
 import { name as packageName } from "../../package.json";
 import { Algebra } from "../query-tree/index.js";
 import { toSparql } from "../query-tree/translate.js";
-import { findFirstOpOfType, type QueryNodeWithAncestors } from "../query-tree/traverse.js";
+import { findFirstOpOfType, type QueryNodeWithAncestors, type TraversalState } from "../query-tree/traverse.js";
+import { SetC } from "../utils.js";
 
 import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary } from "./lift.js";
 import { replaceChild } from "./utils.js";
@@ -13,21 +14,29 @@ import { replaceChild } from "./utils.js";
 const debug = createDebug(`${packageName}:move-unions-to-top`);
 
 export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
-    let traverseResult = findFirstOpOfType(Algebra.types.UNION, query);
-    if (traverseResult === null) {
-        return query; // No unions to move
-    }
-    let unionOpWAncestors = traverseResult[0];
-    let traversalState: (typeof traverseResult)[1] | undefined = traverseResult[1];
-    assert(unionOpWAncestors.ancestors.length !== 0 && unionOpWAncestors.value.parentIdx !== null); // Invariant: the top level projection must be above the union
+    let newQuery: Algebra.Operation = query;
 
-    let newQuery: Algebra.Operation;
-    const skipUnions = new Set<Algebra.Union>(); // Unions that cannot be moved all the way up
+    const ignoredUnions = new SetC<Algebra.Union>(); // Unions that cannot be moved all the way up
+    const ignoredSubtrees = new SetC<Algebra.Operation>();
+    let traversalState: TraversalState | undefined = undefined;
     while (true) {
+        const traversalResult: ReturnType<typeof findFirstOpOfType<Algebra.types.UNION>> = findFirstOpOfType(
+            Algebra.types.UNION,
+            newQuery,
+            ignoredSubtrees,
+            ignoredUnions,
+            traversalState,
+        );
+        if (traversalResult === null) {
+            break; // No (more) unions to move
+        }
+        const unionOpWAncestors: (typeof traversalResult)[0] = traversalResult[0];
+        traversalState = traversalResult[1];
+        assert(unionOpWAncestors.ancestors.length !== 0 && unionOpWAncestors.value.parentIdx !== null); // Invariant: union is not top-level
+
         try {
-            const newQuery_ = moveUnionToTop(unionOpWAncestors);
-            newQuery = newQuery_;
-            skipUnions.add(newQuery_); // Skip top-level unions
+            newQuery = moveUnionToTop(unionOpWAncestors);
+            ignoredUnions.add(newQuery); // Skip top-level unions
             traversalState = undefined; // Tree has changed
             debug(
                 toSparql({
@@ -39,19 +48,16 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
         } catch (err) {
             assert(err instanceof BadNodeError);
             // Skip all nodes under the bad node
-            while (traversalState!.path.pop()?.value !== err.node);
-
-            skipUnions.add(unionOpWAncestors.value.value);
-            newQuery = unionOpWAncestors.ancestors[0]!.value;
+            ignoredSubtrees.add(err.node);
+            // Avoid a having to traverse up to this node again, only to skip it
+            while (traversalState!.path.at(-1)?.value !== err.node) {
+                traversalState!.path.pop();
+                traversalState!.pathNextChildToVisitIdx.pop();
+            }
+            traversalState!.path.pop();
+            traversalState!.pathNextChildToVisitIdx.pop();
         }
-        traverseResult = findFirstOpOfType(Algebra.types.UNION, newQuery, skipUnions, traversalState);
-        if (traverseResult === null) {
-            break;
-        }
-        [unionOpWAncestors, traversalState] = traverseResult;
-        assert(unionOpWAncestors.ancestors.length !== 0 && unionOpWAncestors.value.parentIdx !== null); // Invariant: the top level union operator is always above
     }
-
     if (newQuery.type !== Algebra.types.PROJECT) {
         // Union operator was moved above the final projection operator
         newQuery = {
@@ -60,6 +66,7 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
             input: newQuery,
         };
     }
+
     return newQuery;
 }
 

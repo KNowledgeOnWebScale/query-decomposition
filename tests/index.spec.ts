@@ -146,6 +146,14 @@ it("Flattens joins during decomposition", () => {
     });
 });
 
+test("Only immovable union", () => {
+    expectQueryBodyUnmodified((f, A, B, C) => {
+        return {
+            input: F.createMinus(A, F.createUnion(B, C)),
+        };
+    }, moveUnionsToTop);
+});
+
 describe("Complex queries with unions that cannot be moved", () => {
     it("Multiple unions indirectly in RHS of minus", () => {
         expectQueryEquivalence3((f, A, B, C, D, E, G, H) => {
@@ -171,7 +179,7 @@ describe("Complex queries with unions that cannot be moved", () => {
             };
         });
     });
-    it("Immovable union and later in the tree movable union", () => {
+    it("Immovable union followed by movable union", () => {
         expectQueryEquivalence3((f, A, B, C, D, E) => {
             const exprA = f.createExpression();
             return {
@@ -179,6 +187,24 @@ describe("Complex queries with unions that cannot be moved", () => {
                 expectedSubqueries: [
                     F.createJoin(F.createMinus(A, F.createFilter(F.createUnion(B, C), exprA)), D),
                     F.createJoin(F.createMinus(A, F.createFilter(F.createUnion(B, C), exprA)), E),
+                ],
+            };
+        });
+    });
+
+    it("Immovable union followed by movable union followed by immovable union followed by movable union", () => {
+        expectQueryEquivalence3((f, A, B, C, D, E, G, H, I, J) => {
+            const u1 = F.createUnion(B, C);
+            const u3 = F.createUnion(G, H);
+
+            const g = F.createMinus(A, u1);
+            return {
+                input: F.createJoin(F.createMinus(F.createJoin(g, F.createUnion(D, E)), u3), F.createUnion(I, J)),
+                expectedSubqueries: [
+                    F.createJoin(F.createMinus(F.createJoin(g, D), u3), I),
+                    F.createJoin(F.createMinus(F.createJoin(g, D), u3), J),
+                    F.createJoin(F.createMinus(F.createJoin(g, E), u3), I),
+                    F.createJoin(F.createMinus(F.createJoin(g, E), u3), J),
                 ],
             };
         });
