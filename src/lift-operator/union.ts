@@ -5,7 +5,7 @@ import createDebug from "debug";
 import { name as packageName } from "../../package.json";
 import { Algebra } from "../query-tree/index.js";
 import { toSparql } from "../query-tree/translate.js";
-import { findFirstOpOfTypeNotRoot, type QueryNodeWithAncestors } from "../query-tree/traverse.js";
+import { findFirstOpOfType, type QueryNodeWithAncestors } from "../query-tree/traverse.js";
 
 import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary } from "./lift.js";
 import { replaceChild } from "./utils.js";
@@ -13,25 +13,23 @@ import { replaceChild } from "./utils.js";
 const debug = createDebug(`${packageName}:move-unions-to-top`);
 
 export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
-    let unionOp = findFirstOpOfTypeNotRoot(Algebra.types.UNION, query);
-    if (unionOp === null) {
+    let unionOpWAncestors = findFirstOpOfType(Algebra.types.UNION, query);
+    if (unionOpWAncestors === null) {
         return query; // No unions to move
     }
-
-    assert(!unionOp.ancestors.isEmpty()); // Invariant: the top level projection must be above the union
-
-    const origQuery = structuredClone(query);
+    assert(unionOpWAncestors.ancestors.length !== 0 && unionOpWAncestors.value.parentIdx !== null); // Invariant: the top level projection must be above the union
 
     let newQuery: Algebra.Operation;
     const skipUnions = new Set<Algebra.Union>(); // Unions that cannot be moved all the way up
     do {
-        const newQuery_ = moveUnionToTop(unionOp);
+        const newQuery_ = moveUnionToTop(unionOpWAncestors);
         if (newQuery_ !== null) {
             newQuery = newQuery_;
+            skipUnions.add(newQuery_); // Skip top-level unions
         } else {
-            skipUnions.add(unionOp.value.value);
+            skipUnions.add(unionOpWAncestors.value.value);
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            newQuery = unionOp.ancestors.peekFront()!.value;
+            newQuery = unionOpWAncestors.ancestors[0].value;
         }
         debug(
             toSparql({
@@ -40,15 +38,17 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
                 input: newQuery,
             }),
         );
-        unionOp = findFirstOpOfTypeNotRoot(Algebra.types.UNION, newQuery, skipUnions); // Invariant: the top level union operation is always above!
-        assert(unionOp === null || !unionOp.ancestors.isEmpty()); // Invariant: the top level projection must be above the union
-    } while (unionOp !== null);
+        unionOpWAncestors = findFirstOpOfType(Algebra.types.UNION, newQuery, skipUnions);
+        if (unionOpWAncestors !== null) {
+            assert(unionOpWAncestors.ancestors.length !== 0 && unionOpWAncestors.value.parentIdx !== null); // Invariant: the top level union operator is always above
+        }
+    } while (unionOpWAncestors !== null);
 
     if (newQuery.type !== Algebra.types.PROJECT) {
-        // Union operator was moved above the final projection operation
+        // Union operator was moved above the final projection operator
         newQuery = {
             type: Algebra.types.PROJECT,
-            variables: origQuery.variables,
+            variables: query.variables,
             input: newQuery,
         };
     }
@@ -64,44 +64,40 @@ const BINARY_OPS_LEFT_DISTR_TYPES = [Algebra.types.LEFT_JOIN, Algebra.types.MINU
 // Binary parent operators that are at least left- or right-distributive over the union operator
 const BINARY_OPS_TYPES_ANY_DISTR_TYPES = [...BINARY_OPS_DISTR_TYPES, ...BINARY_OPS_LEFT_DISTR_TYPES] as const;
 
-export function moveUnionToTop(unionOp: QueryNodeWithAncestors<Algebra.Union>): Algebra.Union | null {
-    assert(!unionOp.ancestors.isEmpty());
-
+export function moveUnionToTop(unionOpWAncestors: QueryNodeWithAncestors<Algebra.Union>): Algebra.Union | null {
     // Check if union operator occurs in left-hand side operand of operator type present in `BINARY_OPS_LEFT_DISTR_TYPES`
-    for (let i = 0; i < unionOp.ancestors.length; i++) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const parentOp = unionOp.ancestors.peekAt(i)!;
-        if (Algebra.isOneOfOpTypes(parentOp.value, BINARY_OPS_LEFT_DISTR_TYPES) && parentOp.parentIdx === 1) {
+    for (const ancestor of unionOpWAncestors.ancestors) {
+        if (Algebra.isOneOfOpTypes(ancestor.value, BINARY_OPS_LEFT_DISTR_TYPES) && ancestor.parentIdx === 1) {
             // Cannot move union operator all the way to the top, so do not move it at all!
             return null;
         }
     }
 
-    let unionOp__ = unionOp.value.value;
+    let unionOp = unionOpWAncestors.value.value;
     while (true) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const parentOp = unionOp.ancestors.pop()!.value;
+        const parentOp = unionOpWAncestors.ancestors.pop()!.value;
 
         let newOp: Algebra.Union;
         if (Algebra.isOneOfOpTypes(parentOp, BINARY_OPS_TYPES_ANY_DISTR_TYPES)) {
-            newOp = liftSeqOfBinaryAboveBinary(parentOp, unionOp__);
+            newOp = liftSeqOfBinaryAboveBinary(parentOp, unionOp);
         } else if (Algebra.isOneOfOpTypes(parentOp, UNARY_OPERATOR_TYPES)) {
-            newOp = liftSeqOfBinaryAboveUnary(parentOp, unionOp__);
+            newOp = liftSeqOfBinaryAboveUnary(parentOp, unionOp);
         } else {
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             assert(parentOp.type === Algebra.types.UNION);
             // Associative property of the union operator
-            const childIdx = parentOp.input.indexOf(unionOp__);
+            const childIdx = parentOp.input.indexOf(unionOp);
             assert(childIdx !== -1);
-            parentOp.input.splice(childIdx, 1, ...unionOp__.input); // Replace the child with its inputs
+            parentOp.input.splice(childIdx, 1, ...unionOp.input); // Replace the child with its inputs
             newOp = parentOp;
         }
 
-        const parentParent = unionOp.ancestors.peekBack();
+        const parentParent = unionOpWAncestors.ancestors.at(-1);
         if (parentParent !== undefined) {
             replaceChild(parentParent.value, parentOp, newOp);
             // eslint-disable-next-line no-param-reassign
-            unionOp__ = newOp;
+            unionOp = newOp;
         } else {
             return newOp;
         }

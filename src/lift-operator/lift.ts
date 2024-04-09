@@ -3,10 +3,10 @@ import { strict as assert } from "assert";
 import { Algebra } from "../query-tree/index.js";
 import type { ArrayMinLength } from "../utils.js";
 
-export function liftSeqOfBinaryAboveUnary<
-    U extends Algebra.UnaryOp,
-    B extends Algebra.BinaryOp | Algebra.BinaryOrMoreOp,
->(parentUnary: U, childBinary: B): B {
+export function liftSeqOfBinaryAboveUnary<U extends Algebra.UnaryOp, B extends Algebra.BinaryOrMoreOp>(
+    parentUnary: U,
+    childBinary: B,
+): B {
     assert(parentUnary.input === childBinary);
 
     const newSubOps = childBinary.input.map(subOp => {
