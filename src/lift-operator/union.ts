@@ -13,35 +13,44 @@ import { replaceChild } from "./utils.js";
 const debug = createDebug(`${packageName}:move-unions-to-top`);
 
 export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
-    let unionOpWAncestors = findFirstOpOfType(Algebra.types.UNION, query);
-    if (unionOpWAncestors === null) {
+    let traverseResult = findFirstOpOfType(Algebra.types.UNION, query);
+    if (traverseResult === null) {
         return query; // No unions to move
     }
+    let unionOpWAncestors = traverseResult[0];
+    let traversalState: (typeof traverseResult)[1] | undefined = traverseResult[1];
     assert(unionOpWAncestors.ancestors.length !== 0 && unionOpWAncestors.value.parentIdx !== null); // Invariant: the top level projection must be above the union
 
     let newQuery: Algebra.Operation;
     const skipUnions = new Set<Algebra.Union>(); // Unions that cannot be moved all the way up
-    do {
-        const newQuery_ = moveUnionToTop(unionOpWAncestors);
-        if (newQuery_ !== null) {
+    while (true) {
+        try {
+            const newQuery_ = moveUnionToTop(unionOpWAncestors);
             newQuery = newQuery_;
             skipUnions.add(newQuery_); // Skip top-level unions
-        } else {
+            traversalState = undefined; // Tree has changed
+            debug(
+                toSparql({
+                    type: Algebra.types.PROJECT,
+                    variables: query.variables,
+                    input: newQuery,
+                }),
+            );
+        } catch (err) {
+            assert(err instanceof BadNodeError);
+            // Skip all nodes under the bad node
+            while (traversalState!.path.pop()?.value !== err.node);
+
             skipUnions.add(unionOpWAncestors.value.value);
             newQuery = unionOpWAncestors.ancestors[0]!.value;
         }
-        debug(
-            toSparql({
-                type: Algebra.types.PROJECT,
-                variables: query.variables,
-                input: newQuery,
-            }),
-        );
-        unionOpWAncestors = findFirstOpOfType(Algebra.types.UNION, newQuery, skipUnions);
-        if (unionOpWAncestors !== null) {
-            assert(unionOpWAncestors.ancestors.length !== 0 && unionOpWAncestors.value.parentIdx !== null); // Invariant: the top level union operator is always above
+        traverseResult = findFirstOpOfType(Algebra.types.UNION, newQuery, skipUnions, traversalState);
+        if (traverseResult === null) {
+            break;
         }
-    } while (unionOpWAncestors !== null);
+        [unionOpWAncestors, traversalState] = traverseResult;
+        assert(unionOpWAncestors.ancestors.length !== 0 && unionOpWAncestors.value.parentIdx !== null); // Invariant: the top level union operator is always above
+    }
 
     if (newQuery.type !== Algebra.types.PROJECT) {
         // Union operator was moved above the final projection operator
@@ -63,12 +72,12 @@ const BINARY_OPS_LEFT_DISTR_TYPES = [Algebra.types.LEFT_JOIN, Algebra.types.MINU
 // Binary parent operators that are at least left- or right-distributive over the union operator
 const BINARY_OPS_TYPES_ANY_DISTR_TYPES = [...BINARY_OPS_DISTR_TYPES, ...BINARY_OPS_LEFT_DISTR_TYPES] as const;
 
-export function moveUnionToTop(unionOpWAncestors: QueryNodeWithAncestors<Algebra.Union>): Algebra.Union | null {
+export function moveUnionToTop(unionOpWAncestors: QueryNodeWithAncestors<Algebra.Union>): Algebra.Union {
     // Check if union operator occurs in left-hand side operand of operator type present in `BINARY_OPS_LEFT_DISTR_TYPES`
     for (const ancestor of unionOpWAncestors.ancestors) {
         if (Algebra.isOneOfOpTypes(ancestor.value, BINARY_OPS_LEFT_DISTR_TYPES) && ancestor.parentIdx === 1) {
             // Cannot move union operator all the way to the top, so do not move it at all!
-            return null;
+            throw new BadNodeError(ancestor.value);
         }
     }
 
@@ -99,5 +108,11 @@ export function moveUnionToTop(unionOpWAncestors: QueryNodeWithAncestors<Algebra
         } else {
             return newOp;
         }
+    }
+}
+
+export class BadNodeError extends Error {
+    constructor(public readonly node: Algebra.Minus | Algebra.LeftJoin) {
+        super();
     }
 }

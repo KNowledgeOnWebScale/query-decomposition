@@ -13,17 +13,23 @@ export interface QueryNodeWithAncestors<V extends Algebra.Operand> {
     value: QueryNode<V>;
 }
 
+interface State {
+    path: QueryNode<Algebra.Operation>[];
+    pathNextChildToVisitIdx: number[];
+}
+
 export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
     opType: K,
     root: Algebra.Operation,
     ignoredNodes = new Set<Algebra.Operation>(),
-): QueryNodeWithAncestors<Algebra.OpTypeMapping[K]> | null {
+    state?: State,
+): [QueryNodeWithAncestors<Algebra.OpTypeMapping[K]>, State] | null {
     // Keep state needed for traversal separate, so we can directly return the ancestors
-    const ancestors: QueryNode<Algebra.Operation>[] = [{ value: root, parentIdx: null }];
-    const ancestorsNextChildToVisitIdx: number[] = [0];
+    const path = state?.path ?? [{ value: root, parentIdx: null }];
+    const pathNextChildToVisitIdx = state?.pathNextChildToVisitIdx ?? [0];
 
-    let node = ancestors.at(-1);
-    let nextChildToVisitIdx = ancestorsNextChildToVisitIdx.at(-1);
+    let node = path.at(-1);
+    let nextChildToVisitIdx = pathNextChildToVisitIdx.at(-1);
     while (node !== undefined && nextChildToVisitIdx !== undefined) {
         const nodeOp = node.value;
 
@@ -38,22 +44,25 @@ export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
             }
         }
         if (nextToVisit !== null) {
-            ancestorsNextChildToVisitIdx[ancestorsNextChildToVisitIdx.length - 1] += 1;
+            pathNextChildToVisitIdx[pathNextChildToVisitIdx.length - 1] += 1;
             if (isOp(nextToVisit)) {
-                ancestors.push({ value: nextToVisit, parentIdx: nextChildToVisitIdx });
-                ancestorsNextChildToVisitIdx.push(0);
+                path.push({ value: nextToVisit, parentIdx: nextChildToVisitIdx });
+                pathNextChildToVisitIdx.push(0);
             }
         } else {
             // All of the node's children have been visited
-            const v = ancestors.pop()!;
-            ancestorsNextChildToVisitIdx.pop();
+            const v = path.pop()!;
+            pathNextChildToVisitIdx.pop();
             if (Algebra.isOfOpType(nodeOp, opType) && !ignoredNodes.has(nodeOp)) {
-                return { ancestors: ancestors, value: { value: nodeOp, parentIdx: v.parentIdx } };
+                return [
+                    { ancestors: path, value: { value: nodeOp, parentIdx: v.parentIdx } },
+                    { path, pathNextChildToVisitIdx },
+                ];
             }
         }
 
-        node = ancestors.at(-1);
-        nextChildToVisitIdx = ancestorsNextChildToVisitIdx.at(-1);
+        node = path.at(-1);
+        nextChildToVisitIdx = pathNextChildToVisitIdx.at(-1);
     }
 
     return null;
