@@ -9,7 +9,6 @@ const config: Config = {
     transform: {
         "^.+\\.ts$": ["ts-jest", { useESM: true }],
     },
-    setupFilesAfterEnv: ["jest-extended/all"],
     collectCoverageFrom: ["<rootDir>/**/*.ts"],
     //coverageDirectory: "../coverage",
     verbose: true,
