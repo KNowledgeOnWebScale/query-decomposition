@@ -5,7 +5,12 @@ import createDebug from "debug";
 import { name as packageName } from "../../package.json";
 import { Algebra } from "../query-tree/index.js";
 import { toSparql } from "../query-tree/translate.js";
-import { findFirstOpOfType, type QueryNodeWithAncestors, type TraversalState } from "../query-tree/traverse.js";
+import {
+    findFirstOpOfType,
+    type QueryNode,
+    type QueryNodeWithAncestors,
+    type TraversalState,
+} from "../query-tree/traverse.js";
 import { SetC } from "../utils.js";
 
 import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary } from "./lift.js";
@@ -49,13 +54,10 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
             assert(err instanceof BadNodeError);
             // Skip all nodes under the bad node, since we are in the RHS of a minus or left-join so no nodes can be moved from under it anymore (LHS could be but is already done)
             ignoredSubtrees.add(err.node);
+
             // Avoid a having to traverse up to this node again, only to skip it
-            while (traversalState!.path.at(-1)?.value !== err.node) {
-                traversalState!.path.pop();
-                traversalState!.pathNextChildToVisitIdx.pop();
-            }
-            traversalState!.path.pop();
-            traversalState!.pathNextChildToVisitIdx.pop();
+            traversalState!.path.length = err.traversalState.length;
+            traversalState!.pathNextChildToVisitIdx.length = err.traversalState.length;
         }
     }
     if (newQuery.type !== Algebra.types.PROJECT) {
@@ -83,11 +85,12 @@ export function moveUnionToTop(unionOpWAncestors: QueryNodeWithAncestors<Algebra
     // Check if union operation occurs in right-hand side operand of an operator present in `BINARY_OPS_LEFT_DISTR_TYPES`
     const check = unionOpWAncestors.ancestors.slice();
     check.push(unionOpWAncestors.value);
-    for (let i = 0; i < check.length - 1; i++) {
-        const a = check[i]!.value;
-        if (Algebra.isOneOfOpTypes(a, BINARY_OPS_LEFT_DISTR_TYPES) && check[i + 1]!.parentIdx === 1) {
+    while (check.length > 1) {
+        const b = check.pop()!;
+        const a = check.at(-1)!;
+        if (Algebra.isOneOfOpTypes(a.value, BINARY_OPS_LEFT_DISTR_TYPES) && b.parentIdx === 1) {
             // Cannot move union operator all the way to the top, so do not move it at all!
-            throw new BadNodeError(a);
+            throw new BadNodeError(a.value, check);
         }
     }
 
@@ -122,7 +125,10 @@ export function moveUnionToTop(unionOpWAncestors: QueryNodeWithAncestors<Algebra
 }
 
 export class BadNodeError extends Error {
-    constructor(public readonly node: Algebra.Minus | Algebra.LeftJoin) {
+    constructor(
+        public readonly node: Algebra.Minus | Algebra.LeftJoin,
+        public readonly traversalState: QueryNode<Algebra.Operation>[],
+    ) {
         super();
     }
 }
