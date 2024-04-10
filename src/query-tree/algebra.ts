@@ -1,6 +1,5 @@
-import type { ArrayMinLength, SingleType } from "../utils.js";
-
 import type { Hashable } from "./utils.js";
+import type { ArrayMinLength, SingleType } from "../utils.js";
 
 export type Operation = Project | Union | Minus | Join | LeftJoin | Filter;
 export type Operand = Operation | Bgp;
@@ -73,7 +72,7 @@ export type TernaryOrMoreOp = Exclude<BinaryOrMoreOp, BinaryOp>;
 //
 // Type Guards
 //
-export function isOfOpType<U extends keyof OpTypeMapping>(op: Operation, opType: U): op is OpTypeMapping[U] {
+export function isOfOpType<U extends keyof OpTypeMapping>(op: Operand, opType: U): op is OpTypeMapping[U] {
     return op.type === opType;
 }
 

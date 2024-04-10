@@ -1,17 +1,16 @@
 import { describe, test } from "@jest/globals";
 
+import { toSparql, translate } from "./translate.js";
 import {
     type QueryTransformer,
     expectQueryBodyUnmodified,
     expectQueryBodyEquivalence,
     expectNotQueryBodyEquivalence,
-    expectNotQueriesEquivalence,
+    expectQueryEquivalence,
     expectQueryUnmodified,
-    expectQueriesToNotBeEquivalent,
+    expectNotQueryEquivalence,
 } from "../../tests/utils/index.js";
 import { OperandFactory as F, type CreateMultiOp } from "../../tests/utils/operand-factory.js";
-
-import { toSparql, translate } from "./translate.js";
 
 import { Algebra } from "./index.js";
 
@@ -62,14 +61,14 @@ function checkAssociative(createOp: createMultiOp, expectCb: (a: Algebra.Project
  * `(x * y) * z == x * (y * z)`
  */
 function expectAssociative(createOp: createMultiOp) {
-    checkAssociative(createOp, expectNotQueriesEquivalence);
+    checkAssociative(createOp, expectQueryEquivalence);
 }
 
 /**
  * `(x * y) * z != x * (y * z)`
  */
 function expectNotAssociative(createOp: createMultiOp) {
-    checkAssociative(createOp, expectQueriesToNotBeEquivalent);
+    checkAssociative(createOp, expectNotQueryEquivalence);
 }
 
 const binaryOps: {
@@ -141,7 +140,7 @@ describe("Project", () => {
     test("Order of project variables is irrelevant", () => {
         const f = new F();
         const A = f.createBgp();
-        expectNotQueriesEquivalence(
+        expectQueryEquivalence(
             F.createProject(A, [f.factory.createTerm("?x"), f.factory.createTerm("?y")]),
             F.createProject(A, [f.factory.createTerm("?y"), f.factory.createTerm("?x")]),
         );
@@ -183,6 +182,15 @@ describe("BGP", () => {
                 expected: t2,
             };
         });
+    });
+});
+
+test("Different number of operands join", () => {
+    expectNotQueryBodyEquivalence((f, A, B, C) => {
+        return {
+            input: F.createJoin(A, B, C),
+            expected: F.createJoin(A, B),
+        };
     });
 });
 

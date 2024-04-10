@@ -6,9 +6,9 @@ export interface QueryNode<T extends Algebra.Operand> {
     value: T;
     parentIdx: number | null;
 }
-export type QueryNodeWithParent<T extends Algebra.Operand> = QueryNode<T> & {
+export interface QueryNodeWithParent<T extends Algebra.Operand> extends QueryNode<T> {
     parentIdx: NonNullable<QueryNode<T>["parentIdx"]>;
-};
+}
 
 export interface QueryNodeWithAncestors<V extends Algebra.Operand> {
     ancestors: QueryNode<Algebra.Operation>[];
@@ -23,8 +23,8 @@ export interface TraversalState {
 export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
     opType: K,
     root: Algebra.Operation,
-    ignoredSubTrees = new SetC<Algebra.Operation>(),
-    ignoredNodes = new SetC<Algebra.Operation>(),
+    ignoredSubTrees: SetC<Algebra.Operation>,
+    ignoredNodes: SetC<Algebra.Operation>,
     state?: TraversalState,
 ): [QueryNodeWithAncestors<Algebra.OpTypeMapping[K]>, TraversalState] | null {
     // Keep state needed for traversal separate, so we can directly return the ancestors

@@ -1,21 +1,23 @@
 import { Factory, Util } from "sparqlalgebrajs";
-import type { Pattern } from "sparqlalgebrajs/lib/algebra.js";
 
 import { Algebra } from "../../src/query-tree/index.js";
 import { _translate, reverseTranslate } from "../../src/query-tree/translate.js";
+
 import type { Hashable } from "../../src/query-tree/utils.js";
 import type { ArrayMinLength } from "../../src/utils.js";
+import type { Pattern } from "sparqlalgebrajs/lib/algebra.js";
 
 export type CreateMultiOp<O extends Algebra.BinaryOrMoreOp> = (...operands: O["input"]) => O;
 
 export class OperandFactory {
     private id = 0;
-    private readonly prefixIri = "http://example.com/ns#";
     factory = new Factory();
 
-    createBgp(patterCount = 1): Algebra.Bgp {
+    constructor(private readonly prefixIri = "http://example.com/ns#") {}
+
+    createBgp(patternCount = 1): Algebra.Bgp {
         const patterns = new Array<Pattern>();
-        for (let i = 0; i < patterCount; i += 1) {
+        for (let i = 0; i < patternCount; i += 1) {
             patterns.push(
                 this.factory.createPattern(
                     this.factory.createTerm("?s"),
@@ -37,9 +39,35 @@ export class OperandFactory {
         return ret as ArrayMinLength<Algebra.Bgp, N>;
     }
 
-    createExpression(term_?: string) {
-        const term = term_ ?? `?f${this.id}`;
+    createBgpAndStr(): { v: Algebra.Bgp; s: string } {
+        const s = `?s <${this.prefixIri}l${this.id}> <${this.prefixIri}o${this.id}>`;
+        const bgp = _translate(
+            this.factory.createBgp([
+                this.factory.createPattern(
+                    this.factory.createTerm("?s"),
+                    this.factory.createTerm(`${this.prefixIri}l${this.id}`),
+                    this.factory.createTerm(`${this.prefixIri}o${this.id}`),
+                ),
+            ]),
+        ) as Algebra.Bgp;
         this.id += 1;
+        return { v: bgp, s };
+    }
+
+    createBgpsAndStrs<N extends number>(count: N): ArrayMinLength<{ v: Algebra.Bgp; s: string }, N> {
+        const ret = new Array<{ v: Algebra.Bgp; s: string }>();
+        for (let i = 0; i < count; i += 1) {
+            ret.push(this.createBgpAndStr());
+        }
+        return ret as ArrayMinLength<{ v: Algebra.Bgp; s: string }, N>;
+    }
+
+    createExpression(term?: string) {
+        if (term === undefined) {
+            // eslint-disable-next-line no-param-reassign
+            term = `?f${this.id}`;
+            this.id += 1;
+        }
         return this.factory.createTermExpression(this.factory.createTerm(term));
     }
 

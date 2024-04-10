@@ -2,14 +2,13 @@ import { strict as assert } from "assert";
 
 import createDebug from "debug";
 
+import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary } from "./lift.js";
+import { replaceChild } from "./utils.js";
 import { name as packageName } from "../../package.json";
 import { Algebra } from "../query-tree/index.js";
 import { toSparql } from "../query-tree/translate.js";
 import { findFirstOpOfType, type QueryNodeWithAncestors, type TraversalState } from "../query-tree/traverse.js";
 import { SetC } from "../utils.js";
-
-import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary } from "./lift.js";
-import { replaceChild } from "./utils.js";
 
 const debug = createDebug(`${packageName}:move-unions-to-top`);
 
@@ -47,7 +46,7 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
             );
         } catch (err) {
             assert(err instanceof BadNodeError);
-            // Skip all nodes under the bad node
+            // Skip all nodes under the bad node, since we are in the RHS of a minus or left-join so no nodes can be moved from under it anymore (LHS could be but is already done)
             ignoredSubtrees.add(err.node);
             // Avoid a having to traverse up to this node again, only to skip it
             while (traversalState!.path.at(-1)?.value !== err.node) {
