@@ -1,12 +1,13 @@
 import { expect } from "@jest/globals";
 import createDebug from "debug";
 
-import { OperandFactory as F } from "./operand-factory.js";
 import { name as packageName } from "../../package.json";
 import { moveUnionsToTop } from "../../src/lift-operator/union.js";
 import { areEqualOps } from "../../src/query-tree/compare.js";
 import { Algebra } from "../../src/query-tree/index.js";
 import { toSparql } from "../../src/query-tree/translate.js";
+
+import { OperandFactory as F } from "./operand-factory.js";
 
 import type { ArrayMinLength } from "../../src/utils.js";
 

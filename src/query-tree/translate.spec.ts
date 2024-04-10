@@ -2,9 +2,10 @@ import { strict as assert } from "node:assert";
 
 import { expect, it, test } from "@jest/globals";
 
-import { translate } from "./translate.js";
 import { expectQueryEquivalence } from "../../tests/utils/index.js";
 import { OperandFactory, OperandFactory as F } from "../../tests/utils/operand-factory.js";
+
+import { translate } from "./translate.js";
 
 import { Algebra } from "./index.js";
 

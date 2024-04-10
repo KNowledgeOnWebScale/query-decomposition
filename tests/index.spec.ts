@@ -1,8 +1,9 @@
 import { describe, it, test } from "@jest/globals";
 
+import { moveUnionsToTop } from "../src/lift-operator/union.js";
+
 import { expectQueryBodyUnmodified, expectQueryDecompBodiesEquivalence } from "./utils/index.js";
 import { OperandFactory as F, type CreateMultiOp } from "./utils/operand-factory.js";
-import { moveUnionsToTop } from "../src/lift-operator/union.js";
 
 import type { Algebra } from "../src/query-tree/index.js";
 

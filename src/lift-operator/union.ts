@@ -2,13 +2,14 @@ import { strict as assert } from "assert";
 
 import createDebug from "debug";
 
-import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary } from "./lift.js";
-import { replaceChild } from "./utils.js";
 import { name as packageName } from "../../package.json";
 import { Algebra } from "../query-tree/index.js";
 import { toSparql } from "../query-tree/translate.js";
 import { findFirstOpOfType, type QueryNodeWithAncestors, type TraversalState } from "../query-tree/traverse.js";
 import { SetC } from "../utils.js";
+
+import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary } from "./lift.js";
+import { replaceChild } from "./utils.js";
 
 const debug = createDebug(`${packageName}:move-unions-to-top`);
 

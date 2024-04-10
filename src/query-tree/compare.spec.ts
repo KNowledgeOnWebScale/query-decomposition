@@ -1,6 +1,5 @@
 import { describe, test } from "@jest/globals";
 
-import { toSparql, translate } from "./translate.js";
 import {
     type QueryTransformer,
     expectQueryBodyUnmodified,
@@ -11,6 +10,8 @@ import {
     expectNotQueryEquivalence,
 } from "../../tests/utils/index.js";
 import { OperandFactory as F, type CreateMultiOp } from "../../tests/utils/operand-factory.js";
+
+import { toSparql, translate } from "./translate.js";
 
 import { Algebra } from "./index.js";
 
