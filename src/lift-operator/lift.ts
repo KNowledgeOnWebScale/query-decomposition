@@ -4,17 +4,17 @@ import { Algebra } from "../query-tree/index.js";
 
 import type { ArrayMinLength } from "../utils.js";
 
-export function liftSeqOfBinaryAboveUnary<U extends Algebra.UnaryOp, B extends Algebra.BinaryOrMoreOp>(
+export function liftUnionAboveUnaryOp<U extends Algebra.UnaryOp>(
     parentUnary: U,
-    childBinary: B,
-): B {
-    assert(parentUnary.input === childBinary);
+    unionOp: Algebra.Union,
+): Algebra.Union {
+    assert(parentUnary.input === unionOp);
 
-    const newSubOps = childBinary.input.map(subOp => {
+    const newSubOps = unionOp.input.map(subOp => {
         return { ...structuredClone(parentUnary), input: subOp };
     }) as ArrayMinLength<U, 2>;
 
-    return { ...structuredClone(childBinary), input: newSubOps };
+    return { ...structuredClone(unionOp), input: newSubOps };
 }
 
 function replaceChildAtIdx(parent: Algebra.BinaryOrMoreOp, childIdx: number, newChild: Algebra.Operand) {
@@ -26,26 +26,20 @@ function replaceChildAtIdx(parent: Algebra.BinaryOrMoreOp, childIdx: number, new
     }
 }
 
-export function liftSeqOfBinaryAboveBinary<
-    B1 extends Algebra.BinaryOp | Algebra.BinaryOrMoreOp,
-    B2 extends Algebra.BinaryOp | Algebra.BinaryOrMoreOp,
->(parentBinary: B1, childBinary: B2): B2 {
-    assert(parentBinary.input.includes(childBinary));
+export function liftUnionAboveBinaryOp<B extends Algebra.BinaryOp | Algebra.BinaryOrMoreOp>(
+    parentBinary: B,
+    unionOp: Algebra.Union,
+): Algebra.Union {
+    assert(parentBinary.input.includes(unionOp));
 
-    const childIdx = parentBinary.input.indexOf(childBinary);
+    const childIdx = parentBinary.input.indexOf(unionOp);
 
-    const newSubOp1 = structuredClone(parentBinary);
-    replaceChildAtIdx(newSubOp1, childIdx, childBinary.input[0]);
-
-    const newSubOp2 = structuredClone(parentBinary);
-    if (childBinary.input.length === 2) {
-        replaceChildAtIdx(newSubOp2, childIdx, structuredClone(childBinary.input[1]));
-    } else {
-        replaceChildAtIdx(newSubOp2, childIdx, {
-            ...structuredClone(childBinary),
-            input: structuredClone(childBinary.input.slice(1)),
-        });
+    const newSubOps = new Array<B>();
+    for (const unionOperand of unionOp.input) {
+        const newSubOp = structuredClone(parentBinary);
+        replaceChildAtIdx(newSubOp, childIdx, unionOperand);
+        newSubOps.push(newSubOp);
     }
 
-    return { ...structuredClone(childBinary), input: [newSubOp1, newSubOp2] };
+    return { ...structuredClone(unionOp), input: newSubOps as ArrayMinLength<B, 2> };
 }

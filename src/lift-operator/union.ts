@@ -8,7 +8,7 @@ import { toSparql } from "../query-tree/translate.js";
 import { findFirstOpOfType, type QueryNodeWithAncestors, type TraversalState } from "../query-tree/traverse.js";
 import { SetC } from "../utils.js";
 
-import { liftSeqOfBinaryAboveBinary, liftSeqOfBinaryAboveUnary } from "./lift.js";
+import { liftUnionAboveBinaryOp, liftUnionAboveUnaryOp } from "./lift.js";
 import { replaceChild } from "./utils.js";
 
 const debug = createDebug(`${packageName}:move-unions-to-top`);
@@ -94,9 +94,9 @@ export function moveUnionToTop(unionOpWAncestors: QueryNodeWithAncestors<Algebra
 
         let newOp: Algebra.Union;
         if (Algebra.isOneOfOpTypes(parentOp, BINARY_OPS_TYPES_ANY_DISTR_TYPES)) {
-            newOp = liftSeqOfBinaryAboveBinary(parentOp, unionOp);
+            newOp = liftUnionAboveBinaryOp(parentOp, unionOp);
         } else if (Algebra.isOneOfOpTypes(parentOp, UNARY_OPERATOR_TYPES)) {
-            newOp = liftSeqOfBinaryAboveUnary(parentOp, unionOp);
+            newOp = liftUnionAboveUnaryOp(parentOp, unionOp);
         } else {
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             assert(parentOp.type === Algebra.types.UNION);
