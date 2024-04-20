@@ -21,7 +21,7 @@ export function hashObj(v: hash.NotUndefined) {
     return hash(v, { respectType: false });
 }
 
-export function hashObjOrUndef(v: hash.NotUndefined | undefined) {
+export function hashObjOrUndef(v: hash.NotUndefined | undefined): string | undefined {
     return v !== undefined ? hashObj(v) : v;
 }
 
@@ -35,4 +35,33 @@ export class SetC<T extends hash.NotUndefined> {
     has(value: T) {
         return this.set.has(hashObj(value));
     }
+}
+
+export function areUnorderedEqual<T>(
+    a: readonly T[],
+    b: readonly T[],
+    compareElementsCb: (x: T, y: T) => boolean,
+): boolean {
+    if (a.length !== b.length) {
+        return false;
+    }
+
+    const b_ = b.slice();
+    for (const x of a) {
+        let found = false;
+
+        for (const [idx, y] of b_.entries()) {
+            if (compareElementsCb(x, y)) {
+                found = true;
+                b_.splice(idx, 1);
+                break;
+            }
+        }
+
+        if (!found) {
+            return false;
+        }
+    }
+
+    return true;
 }

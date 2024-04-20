@@ -4,7 +4,7 @@ import { Algebra } from "../query-tree/index.js";
 
 import type { ArrayMinLength } from "../utils.js";
 
-export function liftUnionAboveUnaryOp<U extends Algebra.UnaryOp>(
+export function rewriteUnionToAboveUnaryOp<U extends Algebra.UnaryOp>(
     parentUnary: U,
     unionOp: Algebra.Union,
 ): Algebra.Union {
@@ -17,16 +17,7 @@ export function liftUnionAboveUnaryOp<U extends Algebra.UnaryOp>(
     return { ...structuredClone(unionOp), input: newSubOps };
 }
 
-function replaceChildAtIdx(parent: Algebra.BinaryOrMoreOp, childIdx: number, newChild: Algebra.Operand) {
-    if (parent.type === Algebra.types.JOIN && newChild.type === Algebra.types.JOIN) {
-        // Associative property
-        parent.input.splice(childIdx, 1, ...structuredClone(newChild.input));
-    } else {
-        parent.input.splice(childIdx, 1, structuredClone(newChild));
-    }
-}
-
-export function liftUnionAboveBinaryOp<B extends Algebra.BinaryOp | Algebra.BinaryOrMoreOp>(
+export function rewriteUnionToAboveBinaryOp<B extends Algebra.BinaryOp | Algebra.BinaryOrMoreOp>(
     parentBinary: B,
     unionOp: Algebra.Union,
 ): Algebra.Union {
@@ -42,4 +33,14 @@ export function liftUnionAboveBinaryOp<B extends Algebra.BinaryOp | Algebra.Bina
     }
 
     return { ...structuredClone(unionOp), input: newSubOps as ArrayMinLength<B, 2> };
+}
+
+function replaceChildAtIdx(parent: Algebra.BinaryOrMoreOp, childIdx: number, newChild: Algebra.Operand) {
+    if (parent.type === newChild.type && parent.type === Algebra.types.JOIN) {
+        // Associative property
+        parent.input.splice(childIdx, 1, ...structuredClone(newChild.input));
+        return;
+    }
+
+    parent.input.splice(childIdx, 1, structuredClone(newChild));
 }

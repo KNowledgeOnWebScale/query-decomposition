@@ -15,58 +15,58 @@ export function translate(op: string) {
     return _translate(translateExternal(op, { quads: false }));
 }
 
-export function _translate(opd: AlgebraExternal.Operation): Algebra.Operand {
-    switch (opd.type) {
+export function _translate(op: AlgebraExternal.Operation): Algebra.Operand {
+    switch (op.type) {
         case AlgebraExternal.types.PROJECT: {
             return {
                 type: Algebra.types.PROJECT,
-                input: _translate(opd.input),
-                variables: opd.variables,
+                input: _translate(op.input),
+                variables: op.variables,
             } satisfies Algebra.Project;
         }
         case AlgebraExternal.types.UNION: {
-            assert(hasLengthAtLeast(opd.input, 2));
+            assert(hasLengthAtLeast(op.input, 2));
 
             return {
                 type: Algebra.types.UNION,
-                input: opd.input.map(_translate) as ArrayMinLength<Algebra.Operation, 2>,
+                input: op.input.map(_translate) as ArrayMinLength<Algebra.Operation, 2>,
             } satisfies Algebra.Union;
         }
         case AlgebraExternal.types.MINUS: {
             return {
                 type: Algebra.types.MINUS,
-                input: [_translate(opd.input[0]), _translate(opd.input[1])],
+                input: [_translate(op.input[0]), _translate(op.input[1])],
             } satisfies Algebra.Minus;
         }
         case AlgebraExternal.types.JOIN: {
-            assert(hasLengthAtLeast(opd.input, 2));
+            assert(hasLengthAtLeast(op.input, 2));
 
             return {
                 type: Algebra.types.JOIN,
-                input: opd.input.map(_translate) as ArrayMinLength<Algebra.Operation, 2>,
+                input: op.input.map(_translate) as ArrayMinLength<Algebra.Operation, 2>,
             } satisfies Algebra.Join;
         }
         case AlgebraExternal.types.LEFT_JOIN: {
             return {
                 type: Algebra.types.LEFT_JOIN,
-                input: [_translate(opd.input[0]), _translate(opd.input[1])],
+                input: [_translate(op.input[0]), _translate(op.input[1])],
             } satisfies Algebra.LeftJoin;
         }
         case AlgebraExternal.types.FILTER: {
             return {
                 type: Algebra.types.FILTER,
-                input: _translate(opd.input),
-                expression: opd.expression,
+                input: _translate(op.input),
+                expression: op.expression,
             } satisfies Algebra.Filter;
         }
         case AlgebraExternal.types.BGP: {
             return {
                 type: Algebra.types.BGP,
-                patterns: opd.patterns,
+                patterns: op.patterns,
             } satisfies Algebra.Bgp;
         }
         default: {
-            throw new UnsupportedAlgebraElement(opd);
+            throw new UnsupportedAlgebraElement(op);
         }
     }
 }

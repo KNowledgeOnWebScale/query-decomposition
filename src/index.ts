@@ -1,50 +1,29 @@
 import { strict as assert } from "assert";
 
 import { Algebra } from "./query-tree/index.js";
-import { translate } from "./query-tree/translate.js";
+import { toSparql, translate } from "./query-tree/translate.js";
+import { moveUnionsToTop } from "./rewrite-unions/algorithm.js";
 
-// const q = `
-// PREFIX : <http://example.com/ns#>
+import type { ArrayMinLength } from "./utils.js";
 
-// SELECT * WHERE {
-//     {?s :labelD ?labelD} UNION {?s :labelC ?labelC} UNION {?s :labelB ?labelB}
-// }`;
-// const tq = translate(q, { quads: false });
+export function maximallyDecomposeQuery(query: string): ArrayMinLength<string, 1> {
+    return maximallyDecomposeQueryString_(query).map(toSparql);
+}
 
-const q2 = `
-PREFIX : <http://example.com/ns#>
-SELECT * WHERE {
-        { ?s :labelA ?label } UNION { ?s :labelB ?label }   
-        FILTER(?a)
-}`;
-const tq3 = translate(q2);
-assert(tq3.type === Algebra.types.PROJECT);
+function maximallyDecomposeQueryString_(query: string): ArrayMinLength<Algebra.Project, 1> {
+    const root = translate(query);
+    assert(root.type === Algebra.types.PROJECT);
+    return maximallyDecomposeQueryTree(root);
+}
 
-// Handle Algebra.types.NOP by returning nothing?
+export function maximallyDecomposeQueryTree(root: Algebra.Project): ArrayMinLength<Algebra.Project, 1> {
+    const normalizedRewrittenRoot = moveUnionsToTop(root);
 
-console.debug(JSON.stringify(tq3, null, 4));
-// console.log(toSparql(tq3));
+    if (normalizedRewrittenRoot.input.type !== Algebra.types.UNION) {
+        return [normalizedRewrittenRoot];
+    }
 
-// const factory = new Factory();
-// const counter = 0;
-// const prefixIri = "x#"
-
-// const t = <RDF.Variable>factory.createTerm("s")
-// console.log(t);
-// const ret = factory.createPattern(factory.createTerm("?s"), factory.createTerm(`${prefixIri}l${counter}`), factory.createTerm(`${prefixIri}o${counter}`))
-// console.log(ret)
-
-// assert(tq2.type == Algebra.types.PROJECT);
-// const f = moveUnionsToTop(tq2);
-// prettyPrintJSON(f);
-
-// const op = moveUnionsToTop(tq);
-// console.log(toSparql(op));
-
-// if (op !== null) {
-//   prettyPrintJSON(op);
-// } else {
-//   console.log("Op not found!")
-// }
-//console.log(tq);
-//prettyPrintJSON(tq);
+    const subqueryRoots_ = normalizedRewrittenRoot.input.input;
+    assert(subqueryRoots_.every(elem => elem.type === Algebra.types.PROJECT));
+    return subqueryRoots_ as ArrayMinLength<Algebra.Project, 2>;
+}

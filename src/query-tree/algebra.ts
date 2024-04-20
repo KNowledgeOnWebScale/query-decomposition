@@ -72,13 +72,13 @@ export type TernaryOrMoreOp = Exclude<BinaryOrMoreOp, BinaryOp>;
 //
 // Type Guards
 //
-export function isOfOpType<U extends keyof OpTypeMapping>(op: Operand, opType: U): op is OpTypeMapping[U] {
+export function isOfOpType<T extends keyof OpTypeMapping>(op: Operand, opType: T): op is OpTypeMapping[T] {
     return op.type === opType;
 }
 
-export function isOneOfOpTypes<U extends keyof OpTypeMapping>(
+export function isOneOfOpTypes<T extends keyof OpTypeMapping>(
     op: Operation,
-    opTypes: readonly U[],
-): op is OpTypeMapping[U] {
+    opTypes: readonly T[],
+): op is OpTypeMapping[T] {
     return opTypes.includes(op.type);
 }

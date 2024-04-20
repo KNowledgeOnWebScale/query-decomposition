@@ -1,32 +1,7 @@
-import { hashObj, hashObjOrUndef } from "../utils.js";
+import { areUnorderedEqual, hashObj, hashObjOrUndef } from "../utils.js";
 
 import * as Algebra from "./algebra.js";
 import { inScopeVariables } from "./utils.js";
-
-function areUnorderedEqual<T>(a: readonly T[], b: readonly T[], compareElementsCb: (x: T, y: T) => boolean) {
-    if (a.length !== b.length) {
-        return false;
-    }
-
-    const b_ = b.slice();
-    for (const x of a) {
-        let found = false;
-
-        for (const [idx, y] of b_.entries()) {
-            if (compareElementsCb(x, y)) {
-                found = true;
-                b_.splice(idx, 1);
-                break;
-            }
-        }
-
-        if (!found) {
-            return false;
-        }
-    }
-
-    return true;
-}
 
 function areOrderedEqual<T>(a: T[], b: T[], compareElementsCb: (x: T, y: T) => boolean) {
     return a.length === b.length && a.every((x, idx) => compareElementsCb(x, b[idx]!));

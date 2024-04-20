@@ -13,11 +13,11 @@ it("Does not support solution modifiers", () =>
     expect(() =>
         translate(
             `
-        PREFIX : <http://example.com/ns#>
+            PREFIX : <http://example.com/ns#>
 
-        SELECT * WHERE { ?s :p ?o }
-        ORDER BY ?s
-        `,
+            SELECT * WHERE { ?s :p ?o }
+            ORDER BY ?s
+            `,
         ),
     ).toThrow(new RegExp("^Unsupported SPARQL Algebra element type 'orderby' found")));
 
@@ -25,7 +25,7 @@ test("Everything query", () => {
     const f = new OperandFactory();
     const [A, B, C, D, E] = f.createBgpsAndStrs(5);
 
-    const input2 = `
+    const inputS = `
         PREFIX : <http://example.com/ns#>
 
         SELECT * WHERE { 
@@ -35,7 +35,7 @@ test("Everything query", () => {
             } OPTIONAL { ${E.s} }
             FILTER (?s)
         }`;
-    const input = translate(input2);
+    const input = translate(inputS);
     assert(Algebra.isOfOpType(input, Algebra.types.PROJECT));
 
     const expected = F.createProject(
