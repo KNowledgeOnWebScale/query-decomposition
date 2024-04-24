@@ -1,21 +1,10 @@
 import { areOrderedEqual, areUnorderedEqual, hashObject, hashObjectOrUndefined } from "../utils.js";
 
 import { types, type Operand, type OperandTypeMapping } from "./algebra.js";
-import { inScopeVariables } from "./utils.js";
 
 const EQUIVALENCE_CBS: { [K in Operand["type"]]: (a: OperandTypeMapping[K], b: OperandTypeMapping[K]) => boolean } = {
     [types.PROJECT]: (a, b) => {
-        const aInScopeVariables = new Set(inScopeVariables(a).map(hashObject));
-        const aSelectedInScopeVariables = a.variables.map(hashObject).filter(x => aInScopeVariables.has(x));
-
-        const bInScopeVariables = new Set(inScopeVariables(b).map(hashObject));
-        const bSelectedInScopeVariables = b.variables.map(hashObject).filter(x => bInScopeVariables.has(x));
-
-        return (
-            // Unbound variables do not affect the query result
-            areUnorderedEqual(aSelectedInScopeVariables, bSelectedInScopeVariables, (x, y) => x === y) &&
-            areEquivalent(a.input, b.input)
-        );
+        return hashObject(a.variables) === hashObject(b.variables) && areEquivalent(a.input, b.input);
     },
     [types.UNION]: (a, b) => {
         return areUnorderedEqual(a.input, b.input, areEquivalent);
@@ -36,7 +25,7 @@ const EQUIVALENCE_CBS: { [K in Operand["type"]]: (a: OperandTypeMapping[K], b: O
         return hashObject(a.expression) === hashObject(b.expression) && areEquivalent(a.input, b.input);
     },
     [types.BGP]: (a, b) => {
-        return areUnorderedEqual(a.patterns, b.patterns, (a, b) => hashObject(a) === hashObject(b));
+        return hashObject(a) === hashObject(b);
     },
 };
 

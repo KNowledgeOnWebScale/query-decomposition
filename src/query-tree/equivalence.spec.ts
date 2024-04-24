@@ -138,14 +138,6 @@ describe("Project", () => {
         const A = f.createBgp();
         expectQueryUnmodified(F.createProject(A, [f.factory.createTerm("?x"), f.factory.createTerm("?y")]));
     });
-    test("Order of project variables is irrelevant", () => {
-        const f = new F();
-        const A = f.createBgp();
-        expectQueryEquivalence(
-            F.createProject(A, [f.factory.createTerm("?x"), f.factory.createTerm("?y")]),
-            F.createProject(A, [f.factory.createTerm("?y"), f.factory.createTerm("?x")]),
-        );
-    });
 });
 
 describe("Filter", () => {
@@ -171,16 +163,6 @@ describe("BGP", () => {
         expectQueryBodyUnmodified(f => {
             return {
                 input: f.createBgp(2),
-            };
-        });
-    });
-    test("Order of triples is irrelevant", () => {
-        expectQueryBodyEquivalence(f => {
-            const t = f.createBgp(2);
-            const t2 = { ...structuredClone(t), patterns: [t.patterns[1]!, t.patterns[0]!] };
-            return {
-                input: t,
-                expected: t2,
             };
         });
     });
