@@ -1,9 +1,9 @@
 import { expect } from "@jest/globals";
 import createDebug from "debug";
 
-import { name as packageName } from "../../package.json";
+import { PACKAGE_NAME } from "../../src/constants.js";
 import { maximallyDecomposeQueryTree } from "../../src/index.js";
-import { areEqualOps } from "../../src/query-tree/compare.js";
+import { areEquivalent } from "../../src/query-tree/equivalence.js";
 import { Algebra } from "../../src/query-tree/index.js";
 import { toSparql } from "../../src/query-tree/translate.js";
 import { areUnorderedEqual, type ArrayMinLength } from "../../src/utils.js";
@@ -25,7 +25,7 @@ export function expectQueryDecompBodiesEquivalence(
 
     const foundSubqueries = maximallyDecomposeQueryTree(F.createProject(inputQueryBody));
 
-    if (!areUnorderedEqual(foundSubqueries, expectedSubqueries, areEqualOps)) {
+    if (!areUnorderedEqual(foundSubqueries, expectedSubqueries, areEquivalent)) {
         // const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), packageName));
         // fs.writeFileSync(path.join(tmpdir, "expected_tree.json"), JSON.stringify(expected, null, 4));
         // fs.writeFileSync(path.join(tmpdir, "found_tree.json"), JSON.stringify(found, null, 4));
@@ -83,7 +83,7 @@ export function expectSubqueryDecompUnmodified(input: Algebra.Project) {
     expectQueryEquivalence(foundSubqueries[0], input);
 }
 
-const debug = createDebug(`${packageName}:query-equivalence`);
+const debug = createDebug(`${PACKAGE_NAME}:query-equivalence`);
 
 export function expectQueryEquivalence(input: Algebra.Project, expected: Algebra.Project, cb?: QueryTransformer) {
     const found = cb !== undefined ? cb(input) : input;
@@ -91,7 +91,7 @@ export function expectQueryEquivalence(input: Algebra.Project, expected: Algebra
     debug("found:", toSparql(found));
     debug("expected:", toSparql(expected));
 
-    if (!areEqualOps(found, expected)) {
+    if (!areEquivalent(found, expected)) {
         // const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), packageName));
         // fs.writeFileSync(path.join(tmpdir, "expected_tree.json"), JSON.stringify(expected, null, 4));
         // fs.writeFileSync(path.join(tmpdir, "found_tree.json"), JSON.stringify(found, null, 4));
@@ -116,7 +116,7 @@ export function expectNotQueryEquivalence(input: Algebra.Project, expected: Alge
     debug("found:", toSparql(found));
     debug("expected:", toSparql(expected));
 
-    if (areEqualOps(found, expected)) {
+    if (areEquivalent(found, expected)) {
         // const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), packageName));
         // fs.writeFileSync(path.join(tmpdir, "expected_tree.json"), JSON.stringify(expected, null, 4));
         // fs.writeFileSync(path.join(tmpdir, "found_tree.json"), JSON.stringify(found, null, 4));

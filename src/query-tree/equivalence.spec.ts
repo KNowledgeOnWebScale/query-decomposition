@@ -75,7 +75,7 @@ function expectNotAssociative(createOp: createMultiOp) {
 const binaryOps: {
     [K in Algebra.BinaryOrMoreOp["type"]]: {
         name: string;
-        createOp: CreateMultiOp<Algebra.OpTypeMapping[K]>;
+        createOp: CreateMultiOp<Algebra.OperandTypeMapping[K]>;
         commutative: boolean;
         associative: boolean;
     };
@@ -204,7 +204,7 @@ describe("Operand comparison is count-sensitive for ternary or more operators", 
     const ternaryOrMoreOps: {
         [K in Algebra.TernaryOrMoreOp["type"]]: {
             name: string;
-            createOp: CreateMultiOp<Algebra.OpTypeMapping[K]>;
+            createOp: CreateMultiOp<Algebra.OperandTypeMapping[K]>;
         };
     } = {
         [Algebra.types.JOIN]: {

@@ -2,35 +2,28 @@ import { strict as assert } from "assert";
 
 import createDebug from "debug";
 
-import { name as packageName } from "../../package.json";
+import { PACKAGE_NAME } from "../constants.js";
 import { Algebra } from "../query-tree/index.js";
-import { toSparql } from "../query-tree/translate.js";
-import { findFirstOpOfType, type QueryNodeWithAncestors, type TraversalState } from "../query-tree/traverse.js";
 import { SetC } from "../utils.js";
 
 import { rewriteUnionToAboveBinaryOp, rewriteUnionToAboveUnaryOp } from "./rules.js";
 import { replaceChildOf } from "./utils.js";
 
-const debug = createDebug(`${packageName}:move-unions-to-top`);
+const debug = createDebug(`${PACKAGE_NAME}:move-unions-to-top`);
 
 export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
     let newQuery: Algebra.Operation = query;
 
     const ignoredUnions = new SetC<Algebra.Union>(); // Unions that cannot be moved all the way up
     const ignoredSubtrees = new SetC<Algebra.Operation>();
-    let traversalState: TraversalState | undefined = undefined;
+    let traversalState: Algebra.TraversalState | undefined = undefined;
     while (true) {
-        const traversalResult: ReturnType<typeof findFirstOpOfType<Algebra.types.UNION>> = findFirstOpOfType(
-            Algebra.types.UNION,
-            newQuery,
-            ignoredSubtrees,
-            ignoredUnions,
-            traversalState,
-        );
+        const traversalResult: ReturnType<typeof Algebra.findFirstOpOfType<Algebra.types.UNION>> =
+            Algebra.findFirstOpOfType(Algebra.types.UNION, newQuery, ignoredSubtrees, ignoredUnions, traversalState);
         if (traversalResult === null) {
             break; // No (more) unions to move
         }
-        const unionOpWAncestors: (typeof traversalResult)[0] = traversalResult[0];
+        const unionOpWAncestors = traversalResult[0];
         traversalState = traversalResult[1];
         assert(unionOpWAncestors.ancestors.length !== 0 && unionOpWAncestors.value.parentIdx !== null); // Invariant: union is not top-level
 
@@ -39,7 +32,7 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
             ignoredUnions.add(newQuery); // Skip top-level unions
             traversalState = undefined; // Tree has changed
             debug(
-                toSparql({
+                Algebra.toSparql({
                     type: Algebra.types.PROJECT,
                     variables: query.variables,
                     input: newQuery,
@@ -69,10 +62,6 @@ export function moveUnionsToTop(query: Algebra.Project): Algebra.Project {
 
 // Unary parent operators that preserves the union operator
 const UNARY_OPERATOR_TYPES = [Algebra.types.PROJECT, Algebra.types.FILTER] as const;
-// type UnaryOperators = typeof UNARY_OPERATOR_TYPES_[number];
-// export const UNARY_OPERATOR_TYPES: {[K in UnaryOperators]: boolean;} = {
-//     [Algebra.types.PROJECT]: true,
-// };
 // Binary parent operators that are distributive over the union operator
 const BINARY_OPS_DISTR_TYPES = [Algebra.types.JOIN] as const;
 // Non-commutative binary parent operators that are left-distributive over the union operator
@@ -80,14 +69,14 @@ const BINARY_OPS_LEFT_DISTR_TYPES = [Algebra.types.LEFT_JOIN, Algebra.types.MINU
 // Binary parent operators that are at least left- or right-distributive over the union operator
 const BINARY_OPS_TYPES_ANY_DISTR_TYPES = [...BINARY_OPS_DISTR_TYPES, ...BINARY_OPS_LEFT_DISTR_TYPES] as const;
 
-export function moveUnionToTop(unionOpWAncestors: QueryNodeWithAncestors<Algebra.Union>): Algebra.Union {
+export function moveUnionToTop(unionOpWAncestors: Algebra.QueryNodeWithAncestors<Algebra.Union>): Algebra.Union {
     // Check if union operation occurs in right-hand side operand of an operator present in `BINARY_OPS_LEFT_DISTR_TYPES`
     const check = unionOpWAncestors.ancestors.slice();
     check.push(unionOpWAncestors.value);
     for (let i = 0; i < check.length - 1; i++) {
         const parent = check[i]!;
         const v = check[i + 1]!;
-        if (Algebra.isOneOfOpTypes(parent.value, BINARY_OPS_LEFT_DISTR_TYPES) && v.parentIdx === 1) {
+        if (Algebra.isOneOfTypes(parent.value, BINARY_OPS_LEFT_DISTR_TYPES) && v.parentIdx === 1) {
             throw new BadNodeError(parent.value, i);
         }
     }
@@ -97,9 +86,9 @@ export function moveUnionToTop(unionOpWAncestors: QueryNodeWithAncestors<Algebra
         const parentOp = unionOpWAncestors.ancestors.pop()!.value;
 
         let newOp: Algebra.Union;
-        if (Algebra.isOneOfOpTypes(parentOp, BINARY_OPS_TYPES_ANY_DISTR_TYPES)) {
+        if (Algebra.isOneOfTypes(parentOp, BINARY_OPS_TYPES_ANY_DISTR_TYPES)) {
             newOp = rewriteUnionToAboveBinaryOp(parentOp, unionOp);
-        } else if (Algebra.isOneOfOpTypes(parentOp, UNARY_OPERATOR_TYPES)) {
+        } else if (Algebra.isOneOfTypes(parentOp, UNARY_OPERATOR_TYPES)) {
             newOp = rewriteUnionToAboveUnaryOp(parentOp, unionOp);
         } else {
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

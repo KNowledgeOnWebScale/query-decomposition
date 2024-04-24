@@ -3,8 +3,8 @@ import type { ArrayMinLength, SingleType } from "../utils.js";
 
 export type Operation = Project | Union | Minus | Join | LeftJoin | Filter;
 export type Operand = Operation | Bgp;
-export type OpTypeMapping = {
-    [K in Operation["type"]]: SingleType<Extract<Operation, { type: K }>>;
+export type OperandTypeMapping = {
+    [K in Operand["type"]]: SingleType<Extract<Operand, { type: K }>>;
 };
 
 export interface Project extends Unary {
@@ -72,13 +72,13 @@ export type TernaryOrMoreOp = Exclude<BinaryOrMoreOp, BinaryOp>;
 //
 // Type Guards
 //
-export function isOfOpType<T extends keyof OpTypeMapping>(op: Operand, opType: T): op is OpTypeMapping[T] {
+export function isOfType<T extends keyof OperandTypeMapping>(op: Operand, opType: T): op is OperandTypeMapping[T] {
     return op.type === opType;
 }
 
-export function isOneOfOpTypes<T extends keyof OpTypeMapping>(
-    op: Operation,
+export function isOneOfTypes<T extends keyof OperandTypeMapping>(
+    op: Operand,
     opTypes: readonly T[],
-): op is OpTypeMapping[T] {
+): op is OperandTypeMapping[T] {
     return opTypes.includes(op.type);
 }

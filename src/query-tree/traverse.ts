@@ -26,7 +26,7 @@ export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
     ignoredSubTrees: SetC<Algebra.Operation>,
     ignoredNodes: SetC<Algebra.Operation>,
     state?: TraversalState,
-): [QueryNodeWithAncestors<Algebra.OpTypeMapping[K]>, TraversalState] | null {
+): [QueryNodeWithAncestors<Algebra.OperandTypeMapping[K]>, TraversalState] | null {
     // Keep state needed for traversal separate, so we can directly return the ancestors
     const path = state?.path ?? [{ value: root, parentIdx: null }];
     const pathNextChildToVisitIdx = state?.pathNextChildToVisitIdx ?? [0];
@@ -65,7 +65,7 @@ export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
             // All of the node's children have been visited
             const v = path.pop()!;
             pathNextChildToVisitIdx.pop();
-            if (Algebra.isOfOpType(nodeOp, opType) && !ignoredNodes.has(nodeOp)) {
+            if (Algebra.isOfType(nodeOp, opType) && !ignoredNodes.has(nodeOp)) {
                 return [
                     { ancestors: path, value: { value: nodeOp, parentIdx: v.parentIdx } },
                     { path, pathNextChildToVisitIdx },

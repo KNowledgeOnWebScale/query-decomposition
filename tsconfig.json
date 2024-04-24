@@ -2,10 +2,9 @@
     "compilerOptions": {
         "typeRoots": ["./node_modules/@types", "./src/types"],
         "module": "nodenext",
-        "lib": ["ES2020"],
+        "lib": ["ES2021"],
         "noEmit": true,
         "target": "es2020",
-        "resolveJsonModule": true,
         "allowSyntheticDefaultImports": true,
         "composite": true,
         "noErrorTruncation": true,

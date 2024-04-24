@@ -36,7 +36,7 @@ test("Everything query", () => {
             FILTER (?s)
         }`;
     const input = translate(inputS);
-    assert(Algebra.isOfOpType(input, Algebra.types.PROJECT));
+    assert(Algebra.isOfType(input, Algebra.types.PROJECT));
 
     const expected = F.createProject(
         F.createFilter(

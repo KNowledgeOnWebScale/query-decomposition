@@ -1,1 +1,1 @@
-export * as Algebra from "./algebra.js";
+export * as Algebra from "./modules.js";
