@@ -5,7 +5,7 @@ import { _translate, reverseTranslate } from "../../src/query-tree/translate.js"
 
 import type { Hashable } from "../../src/query-tree/utils.js";
 import type { ArrayMinLength } from "../../src/utils.js";
-import type { Pattern } from "sparqlalgebrajs/lib/algebra.js";
+import type { Algebra as ExternalAlgebra } from "sparqlalgebrajs";
 
 export type CreateMultiOp<O extends Algebra.BinaryOrMoreOp> = (...operands: O["input"]) => O;
 
@@ -16,7 +16,7 @@ export class OperandFactory {
     constructor(private readonly prefixIri = "http://example.com/ns#") {}
 
     createBgp(patternCount = 1): Algebra.Bgp {
-        const patterns = new Array<Pattern>();
+        const patterns = new Array<ExternalAlgebra.Pattern>();
         for (let i = 0; i < patternCount; i += 1) {
             patterns.push(
                 this.factory.createPattern(
@@ -62,7 +62,7 @@ export class OperandFactory {
         return ret as ArrayMinLength<{ v: Algebra.Bgp; s: string }, N>;
     }
 
-    createExpression(term?: string) {
+    createExpression(term?: string): ExternalAlgebra.TermExpression {
         if (term === undefined) {
             // eslint-disable-next-line no-param-reassign
             term = `?f${this.id}`;

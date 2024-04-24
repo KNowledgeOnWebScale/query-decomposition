@@ -7,16 +7,16 @@
         "target": "es2020",
         "allowSyntheticDefaultImports": true,
         "composite": true,
+        "esModuleInterop": true,
         "noErrorTruncation": true,
         "noFallthroughCasesInSwitch": true,
         "noImplicitReturns": true,
+        "noUncheckedIndexedAccess": true,
         "skipLibCheck": true,
         "sourceMap": true,
         "strict": true,
-        "useDefineForClassFields": true,
         "strictNullChecks": true,
-        "esModuleInterop": true,
-        "noUncheckedIndexedAccess": true
+        "useDefineForClassFields": true
     },
     "include": ["src/**/*", "tests/**/*", "package.json"],
     "ts-node": {

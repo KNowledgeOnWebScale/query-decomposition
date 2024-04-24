@@ -17,7 +17,7 @@ export function expectQueryDecompBodiesEquivalence(
         f: F,
         ...bgps: Algebra.Bgp[]
     ) => { inputQueryBody: Algebra.Operand; expectedSubqueryBodies: ArrayMinLength<Algebra.Operand, 1> },
-) {
+): void {
     const f = new F();
 
     const { inputQueryBody, expectedSubqueryBodies } = cb(f, ...f.createBgps(12));
@@ -36,7 +36,7 @@ export function expectQueryDecompBodiesEquivalence(
 
 export function expectSubqueryBodyDecompUnmodified(
     cb: (f: F, ...bgps: Algebra.Bgp[]) => { inputQueryBody: Algebra.Operand },
-) {
+): void {
     const f = new F();
     const { inputQueryBody } = cb(f, ...f.createBgps(12));
 
@@ -49,7 +49,7 @@ export function expectSubqueryBodyDecompUnmodified(
 export function expectQueryBodyEquivalence(
     cb: (f: F, ...bgps: Algebra.Bgp[]) => { input: Algebra.Operand; expected: Algebra.Operand },
     qt?: QueryTransformer,
-) {
+): void {
     const f = new F();
     const { input, expected } = cb(f, ...f.createBgps(8));
 
@@ -59,7 +59,7 @@ export function expectQueryBodyEquivalence(
 export function expectQueryBodyUnmodified(
     cb: (f: F, ...bgps: Algebra.Bgp[]) => { input: Algebra.Operand },
     qt?: QueryTransformer,
-) {
+): void {
     const f = new F();
     const { input } = cb(f, ...f.createBgps(8));
 
@@ -69,14 +69,14 @@ export function expectQueryBodyUnmodified(
 export function expectNotQueryBodyEquivalence(
     cb: (f: F, ...bgps: Algebra.Bgp[]) => { input: Algebra.Operand; expected: Algebra.Operand },
     qt?: QueryTransformer,
-) {
+): void {
     const f = new F();
     const { input, expected } = cb(f, ...f.createBgps(8));
 
     expectNotQueryEquivalence(F.createProject(input), F.createProject(expected), qt);
 }
 
-export function expectSubqueryDecompUnmodified(input: Algebra.Project) {
+export function expectSubqueryDecompUnmodified(input: Algebra.Project): void {
     const foundSubqueries = maximallyDecomposeQueryTree(input);
     expect(foundSubqueries).toHaveLength(1);
 
@@ -85,7 +85,7 @@ export function expectSubqueryDecompUnmodified(input: Algebra.Project) {
 
 const debug = createDebug(`${PACKAGE_NAME}:query-equivalence`);
 
-export function expectQueryEquivalence(input: Algebra.Project, expected: Algebra.Project, cb?: QueryTransformer) {
+export function expectQueryEquivalence(input: Algebra.Project, expected: Algebra.Project, cb?: QueryTransformer): void {
     const found = cb !== undefined ? cb(input) : input;
 
     debug("found:", toSparql(found));
@@ -106,11 +106,15 @@ export function expectQueryEquivalence(input: Algebra.Project, expected: Algebra
     }
 }
 
-export function expectQueryUnmodified(input: Algebra.Project, qt?: QueryTransformer) {
+export function expectQueryUnmodified(input: Algebra.Project, qt?: QueryTransformer): void {
     return expectQueryEquivalence(input, input, qt);
 }
 
-export function expectNotQueryEquivalence(input: Algebra.Project, expected: Algebra.Project, qt?: QueryTransformer) {
+export function expectNotQueryEquivalence(
+    input: Algebra.Project,
+    expected: Algebra.Project,
+    qt?: QueryTransformer,
+): void {
     const found = qt !== undefined ? qt(input) : input;
 
     debug("found:", toSparql(found));

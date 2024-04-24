@@ -11,7 +11,7 @@ import { hasLengthAtLeast, type ArrayMinLength } from "../utils.js";
 import * as Algebra from "./algebra.js";
 import { UnsupportedAlgebraElement } from "./unsupported-element-error.js";
 
-export function translate(op: string) {
+export function translate(op: string): Algebra.Operand {
     return _translate(translateExternal(op, { quads: false }));
 }
 
