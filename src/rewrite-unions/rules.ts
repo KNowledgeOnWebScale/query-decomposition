@@ -14,7 +14,10 @@ export function rewriteUnionToAboveUnaryOp<U extends Algebra.UnaryOp>(
         return { ...structuredClone(parentUnary), input: subOp };
     }) as ArrayMinLength<U, 2>;
 
-    return { ...structuredClone(unionOp), input: newSubOps };
+    const newParent = parentUnary as Algebra.Operation;
+    newParent.type = Algebra.types.UNION;
+    newParent.input = newSubOps;
+    return newParent as Algebra.Union;
 }
 
 export function rewriteUnionToAboveBinaryOp<B extends Algebra.BinaryOp | Algebra.BinaryOrMoreOp>(
@@ -32,7 +35,10 @@ export function rewriteUnionToAboveBinaryOp<B extends Algebra.BinaryOp | Algebra
         newSubOps.push(newSubOp);
     }
 
-    return { ...structuredClone(unionOp), input: newSubOps as ArrayMinLength<B, 2> };
+    const newParent = parentBinary as Algebra.Operation;
+    newParent.type = Algebra.types.UNION;
+    newParent.input = newSubOps as ArrayMinLength<B, 2>;
+    return newParent as Algebra.Union;
 }
 
 function replaceChildAtIdx(parent: Algebra.BinaryOrMoreOp, childIdx: number, newChild: Algebra.Operand) {

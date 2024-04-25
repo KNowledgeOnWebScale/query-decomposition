@@ -7,7 +7,6 @@ import { Algebra } from "../query-tree/index.js";
 import { SetC } from "../utils.js";
 
 import { rewriteUnionToAboveBinaryOp, rewriteUnionToAboveUnaryOp } from "./rules.js";
-import { replaceChildOf } from "./utils.js";
 
 const debug = createDebug(`${PACKAGE_NAME}:move-unions-to-top`);
 
@@ -101,13 +100,10 @@ export function moveUnionToTop(unionOpWAncestors: Algebra.QueryNodeWithAncestors
         }
 
         const parentParent = unionOpWAncestors.ancestors.at(-1);
-        if (parentParent !== undefined) {
-            replaceChildOf(parentParent.value, parentOp, newOp);
-            // eslint-disable-next-line no-param-reassign
-            unionOp = newOp;
-        } else {
+        if (parentParent === undefined) {
             return newOp;
         }
+        unionOp = newOp;
     }
 }
 
