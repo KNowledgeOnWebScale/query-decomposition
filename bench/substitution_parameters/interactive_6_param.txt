@@ -1,0 +1,16 @@
+personId|tagName
+30786325579101|Shakira
+24189255811707|Alberto_Fujimori
+26388279067358|Mary_Magdalene
+17592186044737|Augustus
+32985348834036|Philip_K._Dick
+32985348834013|Ernest_Hemingway
+2199023256919|League_of_Nations
+19791209300317|Nat_King_Cole
+2199023256097|Felix_Mendelssohn
+26388279066931|Queen_Elizabeth_The_Queen_Mother
+10995116277882|Luciano_Pavarotti
+8796093023655|Justin_Timberlake
+6597069767668|Ted_Kennedy
+15393162789696|Croatia
+454|Roger_Ebert

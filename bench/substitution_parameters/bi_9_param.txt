@@ -1,0 +1,7 @@
+tagClass1|tagClass2|threshold
+MusicalArtist|OfficeHolder|200
+MusicalArtist|Writer|200
+MusicalArtist|BritishRoyalty|200
+OfficeHolder|Writer|200
+OfficeHolder|BritishRoyalty|200
+Writer|BritishRoyalty|200

@@ -1,0 +1,16 @@
+date|tagClass1|tagClass2
+599616000000|MusicalArtist|OfficeHolder
+599616000000|MusicalArtist|Writer
+599616000000|MusicalArtist|BritishRoyalty
+599616000000|MusicalArtist|TennisPlayer
+599616000000|MusicalArtist|Philosopher
+599616000000|OfficeHolder|Writer
+599616000000|OfficeHolder|BritishRoyalty
+599616000000|OfficeHolder|TennisPlayer
+599616000000|OfficeHolder|Philosopher
+599616000000|Writer|BritishRoyalty
+599616000000|Writer|TennisPlayer
+599616000000|Writer|Philosopher
+599616000000|BritishRoyalty|TennisPlayer
+599616000000|BritishRoyalty|Philosopher
+599616000000|TennisPlayer|Philosopher
