@@ -15,7 +15,7 @@ export function rewriteUnionToAboveUnaryOp(parentUnary: Algebra.UnaryOp, unionOp
     return newParent as Algebra.Union;
 }
 
-export function rewriteUnionToAboveBinaryOp(
+export function rewriteUnionToAboveBinaryOrMoreOp(
     parentBinary: Algebra.BinaryOrMoreOp,
     unionOp: Algebra.Union,
 ): Algebra.Union {

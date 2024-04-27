@@ -6,7 +6,7 @@ import { PACKAGE_NAME } from "../constants.js";
 import { Algebra } from "../query-tree/index.js";
 import { SetC } from "../utils.js";
 
-import { rewriteUnionToAboveBinaryOp, rewriteUnionToAboveUnaryOp } from "./rules.js";
+import { rewriteUnionToAboveBinaryOrMoreOp, rewriteUnionToAboveUnaryOp } from "./rules.js";
 
 const debug = createDebug(`${PACKAGE_NAME}:move-unions-to-top`);
 
@@ -86,7 +86,7 @@ export function moveUnionToTop(unionOpWAncestors: Algebra.QueryNodeWithAncestors
 
         let newOp: Algebra.Union;
         if (Algebra.isOneOfTypes(parentOp, BINARY_OPS_TYPES_ANY_DISTR_TYPES)) {
-            newOp = rewriteUnionToAboveBinaryOp(parentOp, unionOp);
+            newOp = rewriteUnionToAboveBinaryOrMoreOp(parentOp, unionOp);
         } else if (Algebra.isOneOfTypes(parentOp, UNARY_OPERATOR_TYPES)) {
             newOp = rewriteUnionToAboveUnaryOp(parentOp, unionOp);
         } else {

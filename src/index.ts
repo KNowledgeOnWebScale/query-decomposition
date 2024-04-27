@@ -6,6 +6,8 @@ import { moveUnionsToTop } from "./rewrite-unions/algorithm.js";
 
 import type { ArrayMinLength } from "./utils.js";
 
+export { Algebra };
+
 export function maximallyDecomposeQuery(query: string): ArrayMinLength<string, 1> {
     return maximallyDecomposeQueryString_(query).map(toSparql);
 }
@@ -23,7 +25,7 @@ export function maximallyDecomposeQueryTree(root: Algebra.Project): ArrayMinLeng
         return [normalizedRewrittenRoot];
     }
 
-    const subqueryRoots_ = normalizedRewrittenRoot.input.input;
-    assert(subqueryRoots_.every(elem => elem.type === Algebra.types.PROJECT));
-    return subqueryRoots_ as ArrayMinLength<Algebra.Project, 2>;
+    const subqueryRoots = normalizedRewrittenRoot.input.input;
+    assert(subqueryRoots.every(elem => elem.type === Algebra.types.PROJECT));
+    return subqueryRoots as ArrayMinLength<Algebra.Project, 2>;
 }
