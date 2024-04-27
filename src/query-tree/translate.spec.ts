@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 
-import { expect, it, test } from "@jest/globals";
+import { describe, expect, it, test } from "@jest/globals";
 
 import { expectQueryEquivalence } from "../../tests/utils/index.js";
 import { OperandFactory, OperandFactory as F } from "../../tests/utils/operand-factory.js";
@@ -8,6 +8,7 @@ import { OperandFactory, OperandFactory as F } from "../../tests/utils/operand-f
 import { translate } from "./translate.js";
 
 import { Algebra } from "./index.js";
+import { translate as externalTranslate, toSparql as externalToSparql } from "sparqlalgebrajs";
 
 it("Does not support solution modifiers", () =>
     expect(() =>
@@ -21,7 +22,7 @@ it("Does not support solution modifiers", () =>
         ),
     ).toThrow(new RegExp("^Unsupported SPARQL Algebra element type 'orderby' found")));
 
-test("Everything query", () => {
+describe("Everything query", () => {
     const f = new OperandFactory();
     const [A, B, C, D, E] = f.createBgpsAndStrs(5);
 
@@ -45,5 +46,10 @@ test("Everything query", () => {
         ),
     );
 
-    expectQueryEquivalence(input, expected);
+    test("Forward translation", () => {
+        expectQueryEquivalence(input, expected);
+    })
+    test("Backwards translation", () => {
+        expect(Algebra.toSparql(input)).toBe(externalToSparql(externalTranslate(inputS)));
+    })
 });
