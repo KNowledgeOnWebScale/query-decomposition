@@ -1,14 +1,14 @@
 import { strict as assert } from "node:assert";
 
 import { describe, expect, it, test } from "@jest/globals";
+import { translate as externalTranslate, toSparql as externalToSparql } from "sparqlalgebrajs";
 
-import { expectQueryEquivalence } from "../../tests/utils/index.js";
+import { expectQueryEquivalence } from "../../tests/utils/expect-query.js";
 import { OperandFactory, OperandFactory as F } from "../../tests/utils/operand-factory.js";
 
 import { translate } from "./translate.js";
 
 import { Algebra } from "./index.js";
-import { translate as externalTranslate, toSparql as externalToSparql } from "sparqlalgebrajs";
 
 it("Does not support solution modifiers", () =>
     expect(() =>
@@ -48,8 +48,8 @@ describe("Everything query", () => {
 
     test("Forward translation", () => {
         expectQueryEquivalence(input, expected);
-    })
+    });
     test("Backwards translation", () => {
         expect(Algebra.toSparql(input)).toBe(externalToSparql(externalTranslate(inputS)));
-    })
+    });
 });

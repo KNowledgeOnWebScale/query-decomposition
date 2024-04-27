@@ -13,6 +13,8 @@ export function hasLengthAtLeast<T, L extends number>(arr: T[], length: L): arr 
 export type SingleType<T, U extends T = T> = T extends unknown ? ([U] extends [T] ? T : never) : T;
 // https://stackoverflow.com/questions/53953814/typescript-check-if-a-type-is-a-union
 
+export type Hashable = hash.NotUndefined;
+
 export function hashObject(v: hash.NotUndefined): string {
     return hash(v, { respectType: false });
 }
@@ -24,11 +26,11 @@ export function hashObjectOrUndefined(v: hash.NotUndefined | undefined): string 
 export class SetC<T extends hash.NotUndefined> {
     private readonly set = new Set<string>();
 
-    add(value: T) {
+    add(value: T): void {
         this.set.add(hashObject(value));
     }
 
-    has(value: T) {
+    has(value: T): boolean {
         return this.set.has(hashObject(value));
     }
 }

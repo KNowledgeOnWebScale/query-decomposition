@@ -12,7 +12,7 @@ import {
     expectQueryDecompBodiesEquivalence,
     expectQueryEquivalence,
     expectSubqueryBodyDecompUnmodified,
-} from "./utils/index.js";
+} from "./utils/expect-query.js";
 import { OperandFactory as F, OperandFactory, type CreateMultiOp } from "./utils/operand-factory.js";
 
 it("Does not modify a query with no union operations", () => {

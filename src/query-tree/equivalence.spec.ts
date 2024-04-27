@@ -8,7 +8,7 @@ import {
     expectQueryEquivalence,
     expectQueryUnmodified,
     expectNotQueryEquivalence,
-} from "../../tests/utils/index.js";
+} from "../../tests/utils/expect-query.js";
 import { OperandFactory as F, type CreateMultiOp } from "../../tests/utils/operand-factory.js";
 
 import { toSparql, translate } from "./translate.js";

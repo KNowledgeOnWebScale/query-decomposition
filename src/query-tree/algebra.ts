@@ -1,5 +1,4 @@
-import type { Hashable } from "./utils.js";
-import type { ArrayMinLength, SingleType } from "../utils.js";
+import type { ArrayMinLength, Hashable, SingleType } from "../utils.js";
 
 export type Operation = Project | Union | Minus | Join | LeftJoin | Filter;
 export type Operand = Operation | Bgp;

@@ -1,10 +1,11 @@
-import { Factory, Util } from "sparqlalgebrajs";
+import { Factory } from "sparqlalgebrajs";
 
 import { Algebra } from "../../src/query-tree/index.js";
-import { _translate, reverseTranslate } from "../../src/query-tree/translate.js";
+import { _translate } from "../../src/query-tree/translate.js";
 
-import type { Hashable } from "../../src/query-tree/utils.js";
-import type { ArrayMinLength } from "../../src/utils.js";
+import { inScopeVariables } from "./index.js";
+
+import type { ArrayMinLength, Hashable } from "../../src/utils.js";
 import type { Algebra as ExternalAlgebra } from "sparqlalgebrajs";
 
 export type CreateMultiOp<O extends Algebra.BinaryOrMoreOp> = (...operands: O["input"]) => O;
@@ -111,7 +112,7 @@ export class OperandFactory {
         return {
             type: Algebra.types.PROJECT,
             input,
-            variables: variables ?? Util.inScopeVariables(reverseTranslate(input)),
+            variables: variables ?? inScopeVariables(input),
         };
     }
 }
