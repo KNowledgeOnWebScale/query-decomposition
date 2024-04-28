@@ -1,11 +1,11 @@
 import { Factory } from "sparqlalgebrajs";
 
-import { QueryTree } from "../../src/query-tree/index.js";
-import { _translate } from "../../src/query-tree/translate.js";
+import { QueryTree } from "@src/query-tree/index.js";
+import { _translate } from "@src/query-tree/translate.js";
 
 import { inScopeVariables } from "./index.js";
 
-import type { ArrayMinLength, Hashable } from "../../src/utils.js";
+import type { ArrayMinLength, Hashable } from "@src/utils.js";
 import type { Algebra as ExternalAlgebra } from "sparqlalgebrajs";
 
 export type CreateMultiOp<O extends QueryTree.BinaryOrMoreOp> = (...operands: O["input"]) => O;

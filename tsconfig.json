@@ -1,10 +1,15 @@
 {
     "compilerOptions": {
+        "baseUrl": "./",
         "typeRoots": ["./node_modules/@types", "./src/types"],
         "module": "nodenext",
         "lib": ["ES2021"],
         "noEmit": true,
         "target": "es2020",
+        "paths": {
+            "@src/*": ["src/*"],
+            "@tests/*": ["tests/*"]
+        },
         "allowSyntheticDefaultImports": true,
         "composite": true,
         "esModuleInterop": true,
@@ -21,7 +26,6 @@
     "include": ["src/**/*", "tests/**/*", "package.json"],
     "ts-node": {
         "experimentalSpecifierResolution": "node",
-        // Skip typechecking
         "transpileOnly": true,
         "esm": true
     }

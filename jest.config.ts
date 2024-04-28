@@ -1,4 +1,6 @@
 import type { Config } from "jest";
+import { compilerOptions } from "./tsconfig.json";
+import { pathsToModuleNameMapper } from "ts-jest";
 
 const config: Config = {
     testEnvironment: "node",
@@ -10,8 +12,9 @@ const config: Config = {
         "^.+\\.ts$": ["ts-jest", { useESM: true }],
     },
     collectCoverageFrom: ["<rootDir>/**/*.ts"],
-    //coverageDirectory: "../coverage",
     verbose: true,
+    modulePaths: [compilerOptions.baseUrl],
+    moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, { useESM: true }),
 };
 
 export default config;

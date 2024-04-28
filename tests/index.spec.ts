@@ -2,9 +2,9 @@ import { strict as assert } from "node:assert";
 
 import { describe, expect, it, test } from "@jest/globals";
 
-import { maximallyDecomposeQuery } from "../src/index.js";
-import { QueryTree } from "../src/query-tree/index.js";
-import { translate } from "../src/query-tree/translate.js";
+import { maximallyDecomposeQuery } from "@src/index.js";
+import { QueryTree } from "@src/query-tree/index.js";
+import { translate } from "@src/query-tree/translate.js";
 
 import { OperandFactory as F, OperandFactory, type CreateMultiOp } from "./utils/operand-factory.js";
 import { expectQueryDecompBodiesEquivalence } from "./utils/query-tree/expect-body.js";

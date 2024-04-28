@@ -1,6 +1,6 @@
-import { maximallyDecomposeQueryTree } from "../../../src/index.js";
-import { QueryTree } from "../../../src/query-tree/index.js";
-import { areUnorderedEqual, type ArrayMinLength } from "../../../src/utils.js";
+import { maximallyDecomposeQueryTree } from "@src/index.js";
+import { QueryTree } from "@src/query-tree/index.js";
+import { areUnorderedEqual, type ArrayMinLength } from "@src/utils.js";
 
 import { OperandFactory as F } from "./../operand-factory.js";
 import { areEquivalent } from "./../query-tree/equivalence.js";

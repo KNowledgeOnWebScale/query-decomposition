@@ -2,7 +2,8 @@ import { strict as assert } from "node:assert";
 
 import { describe, test } from "@jest/globals";
 
-import { QueryTree } from "../../../src/query-tree/index.js";
+import { QueryTree } from "@src/query-tree/index.js";
+
 import { OperandFactory as F, type CreateMultiOp } from "../operand-factory.js";
 
 import { expectNotQueryBodyEquivalence, expectQueryBodyEquivalence, type QueryTransformer } from "./expect-body.js";
