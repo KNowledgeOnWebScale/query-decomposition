@@ -1,0 +1,98 @@
+import * as path from "node:path";
+import { getQueries } from "./queries.js";
+import { PROJECT_DIR } from "./utils.js";
+
+
+const QUERIES_DIR = path.join(PROJECT_DIR, "./queries-templated");
+//const QUERY_ID_FROM_FILENAME_RE = new RegExp("-([0-9]+).sparql$")
+
+const QUERY_SUBSTITUTIONS_DIR = path.join(PROJECT_DIR, "./substitution_parameters");
+//const SUBSTITUTION_ID_FROM_FILENAME_RE = new RegExp("^interactive_([0-9]+)_param.txt$");
+
+const queries = getQueries();
+
+
+
+const queries = []
+let bad = 0;
+let good = 0;
+for (let [queryFilePath, queryS] of queryStrings) {
+    // if (!queryS.includes("UNION")) {
+    //     continue;
+    // }
+
+    queryS = fixupQuery(queryS);
+    
+    const queryName = path.basename(queryFilePath).replace(new RegExp("-(complex|short)"), "").replace("-", "_").replace(new RegExp("([0-9+])(-[a-z\-]+)?\.sparql"), "$1")
+    const substitutions = querySubstitutions.get(queryName);
+    assert(substitutions !== undefined);
+
+    substitutions.length = 1;
+
+    // const GLOBAL_LIMIT_RE = new RegExp("^LIMIT (\\d+)$", "m");
+
+    // const limitCountMatch = GLOBAL_LIMIT_RE.exec(queryS);
+    // const limitCount = limitCountMatch !== null ? limitCountMatch[1]! : null;
+    // queryS = queryS.replace(GLOBAL_LIMIT_RE, "");
+
+    const CREATE_TEMPLATE_VAR_RE = (name: string) => new RegExp(`\\$${name}\\b`, "g")
+
+    const queryInstStrings = []
+    for (const substitution of substitutions) {
+        let querySInst = structuredClone(queryS)
+        for (const [k, v] of Object.entries(substitution)) {
+            //console.log(`REPLACE ${k} with ${v}`)
+            querySInst = querySInst.replaceAll(`$${k}`, v);
+        }
+        try {
+            assert(!CREATE_TEMPLATE_VAR_RE("[a-zA-Z]+").test(querySInst));
+        } catch (e) {
+            //console.log("FAILED");
+            console.log(queryFilePath)
+            console.log(querySInst)
+            exit(1)
+        }
+        if (querySInst.includes("$messageId")) {
+            const i =2;
+        }
+
+        //console.log(queryFilePath, new RegExp("\$").exec(querySInst));
+        queryInstStrings.push(querySInst)
+    }
+    //console.log(queryInstStrings)
+    //console.log(substitutions)
+
+    //console.log(queryInstStrings);
+
+    // if (queryS.includes("UNION")) {
+    //     console.log(queryS);
+    // }
+    const subqueries = maximallyDecomposeQuery(queryS).map(x => x + "\nLIMIT 2");
+    // console.log(subqueries);
+
+    //const subqueriesResults = await Promise.all(subqueries.map(executeQuery));
+    console.log("EXECUTING", subqueries[0]);
+    const q = `
+        SELECT ?personId ?p2 WHERE {
+        ?rootPerson <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/Person>;
+          <http://www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/id> ?personId.
+        }
+        LIMIT 2
+    `
+
+    console.log((await executeQuery(subqueries[0])).map(bind => bind.toString()));
+
+    // try {
+    //     const query = translate(queryS);
+    //     good += 1;
+    // } catch (err) {
+    //     if (!(err instanceof UnsupportedAlgebraElement)) {
+    //         bad += 1;
+    //         //throw err;
+    //     } else {
+    //         console.log(err.message)
+    //     }
+    // }
+}
+// console.log("GOT GOOD", good);
+// console.log("GOT BAD", bad);

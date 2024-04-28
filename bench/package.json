@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@comunica/query-sparql": "^3.0.3",
+    "move-sparql-unions-to-top": "file:../",
     "csv-parse": "^5.5.5",
     "ts-node": "^10.9.1"
   },

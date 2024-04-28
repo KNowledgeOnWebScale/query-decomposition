@@ -1,5 +1,5 @@
 
-export function fixupQuery(query: string): string {
+export function fixupQueryTemplate(query: string): string {
     const queryTransformers: ((query: string) => string)[] = [removeTopLevelOrderBy, replaceSimpleBinds];
 
     return queryTransformers.reduce((queryS, cb) => cb(queryS), query);
