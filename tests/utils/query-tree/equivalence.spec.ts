@@ -1,33 +1,29 @@
+import { strict as assert } from "node:assert";
+
 import { describe, test } from "@jest/globals";
 
-import {
-    type QueryTransformer,
-    expectQueryBodyUnmodified,
-    expectQueryBodyEquivalence,
-    expectNotQueryBodyEquivalence,
-    expectQueryEquivalence,
-    expectQueryUnmodified,
-    expectNotQueryEquivalence,
-} from "../../tests/utils/expect-query.js";
-import { OperandFactory as F, type CreateMultiOp } from "../../tests/utils/operand-factory.js";
+import { QueryTree } from "../../../src/query-tree/index.js";
+import { OperandFactory as F, type CreateMultiOp } from "../operand-factory.js";
 
-import { toSparql, translate } from "./translate.js";
+import { expectNotQueryBodyEquivalence, expectQueryBodyEquivalence, type QueryTransformer } from "./expect-body.js";
+import { expectNotQueryEquivalence, expectQueryEquivalence } from "./expect.js";
 
-import { Algebra } from "./index.js";
-
-type createMultiOp = (...operands: Algebra.BinaryOp["input"]) => Algebra.BinaryOrMoreOp;
+type createMultiOp = (...operands: QueryTree.BinaryOp["input"]) => QueryTree.BinaryOrMoreOp;
 
 function checkCommutative(
     createOp: createMultiOp,
     expectCb: (
-        cb: (f: F, ...bgps: Algebra.Bgp[]) => { input: Algebra.Operand; expected: Algebra.Operand },
+        cb: (
+            f: F,
+            ...bgps: QueryTree.Bgp[]
+        ) => { inputQueryBody: QueryTree.Operand; expectedQueryBody: QueryTree.Operand },
         qt?: QueryTransformer,
     ) => void,
 ) {
     expectCb((f, A, B) => {
         return {
-            input: createOp(A, B),
-            expected: createOp(B, A),
+            inputQueryBody: createOp(A, B),
+            expectedQueryBody: createOp(B, A),
         };
     });
 }
@@ -48,13 +44,15 @@ function expectNotCommutative(createOp: createMultiOp) {
     checkCommutative(createOp, expectNotQueryBodyEquivalence);
 }
 
-function checkAssociative(createOp: createMultiOp, expectCb: (a: Algebra.Project, b: Algebra.Project) => void) {
+function checkAssociative(createOp: createMultiOp, expectCb: (a: QueryTree.Project, b: QueryTree.Project) => void) {
     const f = new F();
     const [A, B, C] = f.createBgps(3);
 
     // Associativity is encoded into the tree on construction
-    const input = translate(toSparql(F.createProject(createOp(createOp(A, B), C)))) as Algebra.Project;
-    const expected = translate(toSparql(F.createProject(createOp(A, createOp(B, C))))) as Algebra.Project;
+    const input = QueryTree.translate(QueryTree.toSparql(F.createProject(createOp(createOp(A, B), C))));
+    assert(input.type === QueryTree.types.PROJECT);
+    const expected = QueryTree.translate(QueryTree.toSparql(F.createProject(createOp(A, createOp(B, C)))));
+    assert(expected.type === QueryTree.types.PROJECT);
 
     expectCb(input, expected);
 }
@@ -73,32 +71,32 @@ function expectNotAssociative(createOp: createMultiOp) {
 }
 
 const binaryOps: {
-    [K in Algebra.BinaryOrMoreOp["type"]]: {
+    [K in QueryTree.BinaryOrMoreOp["type"]]: {
         name: string;
-        createOp: CreateMultiOp<Algebra.OperandTypeMapping[K]>;
+        createOp: CreateMultiOp<QueryTree.OperandTypeMapping[K]>;
         commutative: boolean;
         associative: boolean;
     };
 } = {
-    [Algebra.types.UNION]: {
+    [QueryTree.types.UNION]: {
         name: "Union",
         createOp: F.createUnion,
         commutative: true,
         associative: true,
     },
-    [Algebra.types.MINUS]: {
+    [QueryTree.types.MINUS]: {
         name: "Minus",
         createOp: F.createMinus,
         commutative: false,
         associative: false,
     },
-    [Algebra.types.JOIN]: {
+    [QueryTree.types.JOIN]: {
         name: "Join",
         createOp: F.createJoin,
         commutative: true,
         associative: true,
     },
-    [Algebra.types.LEFT_JOIN]: {
+    [QueryTree.types.LEFT_JOIN]: {
         name: "Left Join",
         createOp: F.createLeftJoin,
         commutative: false,
@@ -108,9 +106,11 @@ const binaryOps: {
 
 describe.each(Object.values(binaryOps))("$name", binaryOp => {
     test(`Identical ${binaryOp.name} queries`, () =>
-        expectQueryBodyUnmodified((f, A, B) => {
+        expectQueryBodyEquivalence((f, A, B) => {
+            const inputQueryBody = binaryOp.createOp(A, B);
             return {
-                input: binaryOp.createOp(A, B),
+                inputQueryBody,
+                expectedQueryBody: inputQueryBody,
             };
         }));
 
@@ -126,8 +126,8 @@ describe.each(Object.values(binaryOps))("$name", binaryOp => {
 test("Different operator types", () => {
     expectNotQueryBodyEquivalence((f, A, B) => {
         return {
-            input: F.createUnion(A, B),
-            expected: F.createJoin(A, B),
+            inputQueryBody: F.createUnion(A, B),
+            expectedQueryBody: F.createJoin(A, B),
         };
     });
 });
@@ -136,23 +136,26 @@ describe("Project", () => {
     test("Identical queries", () => {
         const f = new F();
         const A = f.createBgp();
-        expectQueryUnmodified(F.createProject(A, [f.factory.createTerm("?x"), f.factory.createTerm("?y")]));
+        const inputQuery = F.createProject(A, [f.factory.createTerm("?x"), f.factory.createTerm("?y")]);
+        expectQueryEquivalence(inputQuery, inputQuery);
     });
 });
 
 describe("Filter", () => {
     test("Identical queries", () => {
-        expectQueryBodyUnmodified((f, A) => {
+        expectQueryBodyEquivalence((f, A) => {
+            const inputQueryBody = F.createFilter(A, f.createExpression("?x"));
             return {
-                input: F.createFilter(A, f.createExpression("?x")),
+                inputQueryBody,
+                expectedQueryBody: inputQueryBody,
             };
         });
     });
-    test("Expressions must be exact match", () => {
+    test("Expressions must be identical", () => {
         expectNotQueryBodyEquivalence((f, A) => {
             return {
-                input: F.createFilter(A, f.createExpression("?x")),
-                expected: F.createFilter(A, f.createExpression("?y")),
+                inputQueryBody: F.createFilter(A, f.createExpression("?x")),
+                expectedQueryBody: F.createFilter(A, f.createExpression("?y")),
             };
         });
     });
@@ -160,9 +163,11 @@ describe("Filter", () => {
 
 describe("BGP", () => {
     test("Identical queries", () => {
-        expectQueryBodyUnmodified(f => {
+        expectQueryBodyEquivalence(f => {
+            const inputQueryBody = f.createBgp(2);
             return {
-                input: f.createBgp(2),
+                inputQueryBody,
+                expectedQueryBody: inputQueryBody,
             };
         });
     });
@@ -171,8 +176,8 @@ describe("BGP", () => {
 test("Different number of operands join", () => {
     expectNotQueryBodyEquivalence((f, A, B, C) => {
         return {
-            input: F.createJoin(A, B, C),
-            expected: F.createJoin(A, B),
+            inputQueryBody: F.createJoin(A, B, C),
+            expectedQueryBody: F.createJoin(A, B),
         };
     });
 });
@@ -184,16 +189,16 @@ test("Different number of operands join", () => {
 // However since we never create rewrites like this, we don't take this into account
 describe("Operand comparison is count-sensitive for ternary or more operators", () => {
     const ternaryOrMoreOps: {
-        [K in Algebra.TernaryOrMoreOp["type"]]: {
+        [K in QueryTree.TernaryOrMoreOp["type"]]: {
             name: string;
-            createOp: CreateMultiOp<Algebra.OperandTypeMapping[K]>;
+            createOp: CreateMultiOp<QueryTree.OperandTypeMapping[K]>;
         };
     } = {
-        [Algebra.types.JOIN]: {
+        [QueryTree.types.JOIN]: {
             name: "Join",
             createOp: F.createJoin,
         },
-        [Algebra.types.UNION]: {
+        [QueryTree.types.UNION]: {
             name: "Union",
             createOp: F.createUnion,
         },
@@ -202,8 +207,8 @@ describe("Operand comparison is count-sensitive for ternary or more operators", 
     test.each(Object.values(ternaryOrMoreOps))("$name", ternaryOrMoreOp => {
         expectNotQueryBodyEquivalence((f, A, B) => {
             return {
-                input: ternaryOrMoreOp.createOp(A, A, B),
-                expected: ternaryOrMoreOp.createOp(A, B, B),
+                inputQueryBody: ternaryOrMoreOp.createOp(A, A, B),
+                expectedQueryBody: ternaryOrMoreOp.createOp(A, B, B),
             };
         });
     });

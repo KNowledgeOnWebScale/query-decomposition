@@ -1,1 +1,1 @@
-export * as Algebra from "./modules.js";
+export * as QueryTree from "./modules.js";

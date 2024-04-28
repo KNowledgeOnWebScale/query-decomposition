@@ -1,6 +1,6 @@
 import { Factory } from "sparqlalgebrajs";
 
-import { Algebra } from "../../src/query-tree/index.js";
+import { QueryTree } from "../../src/query-tree/index.js";
 import { _translate } from "../../src/query-tree/translate.js";
 
 import { inScopeVariables } from "./index.js";
@@ -8,7 +8,7 @@ import { inScopeVariables } from "./index.js";
 import type { ArrayMinLength, Hashable } from "../../src/utils.js";
 import type { Algebra as ExternalAlgebra } from "sparqlalgebrajs";
 
-export type CreateMultiOp<O extends Algebra.BinaryOrMoreOp> = (...operands: O["input"]) => O;
+export type CreateMultiOp<O extends QueryTree.BinaryOrMoreOp> = (...operands: O["input"]) => O;
 
 export class OperandFactory {
     private id = 0;
@@ -16,7 +16,7 @@ export class OperandFactory {
 
     constructor(private readonly prefixIri = "http://example.com/ns#") {}
 
-    createBgp(patternCount = 1): Algebra.Bgp {
+    createBgp(patternCount = 1): QueryTree.Bgp {
         const patterns = new Array<ExternalAlgebra.Pattern>();
         for (let i = 0; i < patternCount; i += 1) {
             patterns.push(
@@ -29,18 +29,18 @@ export class OperandFactory {
             this.id += 1;
         }
         const bgp = this.factory.createBgp(patterns);
-        return _translate(bgp) as Algebra.Bgp;
+        return _translate(bgp) as QueryTree.Bgp;
     }
 
-    createBgps<N extends number>(count: N): ArrayMinLength<Algebra.Bgp, N> {
-        const ret = new Array<Algebra.Bgp>();
+    createBgps<N extends number>(count: N): ArrayMinLength<QueryTree.Bgp, N> {
+        const ret = new Array<QueryTree.Bgp>();
         for (let i = 0; i < count; i += 1) {
             ret.push(this.createBgp());
         }
-        return ret as ArrayMinLength<Algebra.Bgp, N>;
+        return ret as ArrayMinLength<QueryTree.Bgp, N>;
     }
 
-    createBgpAndStr(): { v: Algebra.Bgp; s: string } {
+    createBgpAndStr(): { v: QueryTree.Bgp; s: string } {
         const s = `?s <${this.prefixIri}l${this.id}> <${this.prefixIri}o${this.id}>`;
         const bgp = _translate(
             this.factory.createBgp([
@@ -50,17 +50,17 @@ export class OperandFactory {
                     this.factory.createTerm(`${this.prefixIri}o${this.id}`),
                 ),
             ]),
-        ) as Algebra.Bgp;
+        ) as QueryTree.Bgp;
         this.id += 1;
         return { v: bgp, s };
     }
 
-    createBgpsAndStrs<N extends number>(count: N): ArrayMinLength<{ v: Algebra.Bgp; s: string }, N> {
-        const ret = new Array<{ v: Algebra.Bgp; s: string }>();
+    createBgpsAndStrs<N extends number>(count: N): ArrayMinLength<{ v: QueryTree.Bgp; s: string }, N> {
+        const ret = new Array<{ v: QueryTree.Bgp; s: string }>();
         for (let i = 0; i < count; i += 1) {
             ret.push(this.createBgpAndStr());
         }
-        return ret as ArrayMinLength<{ v: Algebra.Bgp; s: string }, N>;
+        return ret as ArrayMinLength<{ v: QueryTree.Bgp; s: string }, N>;
     }
 
     createExpression(term?: string): ExternalAlgebra.TermExpression {
@@ -72,45 +72,45 @@ export class OperandFactory {
         return this.factory.createTermExpression(this.factory.createTerm(term));
     }
 
-    static createFilter(input: Algebra.Operand, expression: Hashable): Algebra.Filter {
+    static createFilter(input: QueryTree.Operand, expression: Hashable): QueryTree.Filter {
         return {
-            type: Algebra.types.FILTER,
+            type: QueryTree.types.FILTER,
             input,
             expression,
         };
     }
 
-    static createJoin(...input: Algebra.Join["input"]): Algebra.Join {
+    static createJoin(...input: QueryTree.Join["input"]): QueryTree.Join {
         return {
-            type: Algebra.types.JOIN,
+            type: QueryTree.types.JOIN,
             input,
         };
     }
 
-    static createLeftJoin(...input: Algebra.LeftJoin["input"]): Algebra.LeftJoin {
+    static createLeftJoin(...input: QueryTree.LeftJoin["input"]): QueryTree.LeftJoin {
         return {
-            type: Algebra.types.LEFT_JOIN,
+            type: QueryTree.types.LEFT_JOIN,
             input,
         };
     }
 
-    static createUnion(...input: Algebra.Union["input"]): Algebra.Union {
+    static createUnion(...input: QueryTree.Union["input"]): QueryTree.Union {
         return {
-            type: Algebra.types.UNION,
+            type: QueryTree.types.UNION,
             input,
         };
     }
 
-    static createMinus(...input: Algebra.Minus["input"]): Algebra.Minus {
+    static createMinus(...input: QueryTree.Minus["input"]): QueryTree.Minus {
         return {
-            type: Algebra.types.MINUS,
+            type: QueryTree.types.MINUS,
             input,
         };
     }
 
-    static createProject(input: Algebra.Project["input"], variables?: Hashable[]): Algebra.Project {
+    static createProject(input: QueryTree.Project["input"], variables?: Hashable[]): QueryTree.Project {
         return {
-            type: Algebra.types.PROJECT,
+            type: QueryTree.types.PROJECT,
             input,
             variables: variables ?? inScopeVariables(input),
         };

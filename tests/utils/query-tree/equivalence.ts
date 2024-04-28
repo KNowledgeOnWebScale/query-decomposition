@@ -1,6 +1,5 @@
-import { areOrderedEqual, areUnorderedEqual, hashObject, hashObjectOrUndefined } from "../utils.js";
-
-import { types, type Operand, type OperandTypeMapping } from "./algebra.js";
+import { types, type Operand, type OperandTypeMapping } from "../../../src/query-tree/types.js";
+import { areOrderedEqual, areUnorderedEqual, hashObject, hashObjectOrUndefined } from "../../../src/utils.js";
 
 const EQUIVALENCE_CBS: { [K in Operand["type"]]: (a: OperandTypeMapping[K], b: OperandTypeMapping[K]) => boolean } = {
     [types.PROJECT]: (a, b) => {

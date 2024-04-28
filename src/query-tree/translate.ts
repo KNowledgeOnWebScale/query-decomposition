@@ -8,7 +8,7 @@ import {
 
 import { hasLengthAtLeast, type ArrayMinLength } from "../utils.js";
 
-import * as Algebra from "./algebra.js";
+import * as Algebra from "./types.js";
 import { UnsupportedAlgebraElement } from "./unsupported-element-error.js";
 
 export function translate(op: string): Algebra.Operand {

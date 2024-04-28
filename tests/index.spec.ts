@@ -3,22 +3,19 @@ import { strict as assert } from "node:assert";
 import { describe, expect, it, test } from "@jest/globals";
 
 import { maximallyDecomposeQuery } from "../src/index.js";
-import { Algebra } from "../src/query-tree/index.js";
+import { QueryTree } from "../src/query-tree/index.js";
 import { translate } from "../src/query-tree/translate.js";
-import { moveUnionsToTop } from "../src/rewrite-unions/algorithm.js";
 
-import {
-    expectQueryBodyUnmodified,
-    expectQueryDecompBodiesEquivalence,
-    expectQueryEquivalence,
-    expectSubqueryBodyDecompUnmodified,
-} from "./utils/expect-query.js";
 import { OperandFactory as F, OperandFactory, type CreateMultiOp } from "./utils/operand-factory.js";
+import { expectQueryDecompBodiesEquivalence } from "./utils/query-tree/expect-body.js";
+import { expectQueryEquivalence } from "./utils/query-tree/expect.js";
 
 it("Does not modify a query with no union operations", () => {
-    expectSubqueryBodyDecompUnmodified((f, A, B, C) => {
+    expectQueryDecompBodiesEquivalence((f, A, B, C) => {
+        const inputQueryBody = F.createLeftJoin(F.createJoin(A, B), C);
         return {
-            inputQueryBody: F.createLeftJoin(F.createJoin(A, B), C),
+            inputQueryBody,
+            expectedSubqueryBodies: [inputQueryBody],
         };
     });
 });
@@ -36,10 +33,10 @@ it("Does not modify a query string with no union operations", () => {
     const foundSubqueryStrings = maximallyDecomposeQuery(inputS);
     expect(foundSubqueryStrings).toHaveLength(1);
     const foundSubQuery = translate(foundSubqueryStrings[0]);
-    assert(foundSubQuery.type === Algebra.types.PROJECT);
+    assert(foundSubQuery.type === QueryTree.types.PROJECT);
 
     const input = translate(inputS);
-    assert(input.type === Algebra.types.PROJECT);
+    assert(input.type === QueryTree.types.PROJECT);
 
     expectQueryEquivalence(foundSubQuery, input);
 });
@@ -73,7 +70,7 @@ it("Lifts a union over final projection and filter", () => {
 });
 
 describe("Lifts a left-hand side union over final projection and", () => {
-    function expectOpDistributesUnion<O extends Algebra.BinaryOrMoreOp>(createOp: CreateMultiOp<O>) {
+    function expectOpDistributesUnion<O extends QueryTree.BinaryOrMoreOp>(createOp: CreateMultiOp<O>) {
         expectQueryDecompBodiesEquivalence((f, A, B, C) => {
             return {
                 inputQueryBody: createOp(F.createUnion(A, B), C),
@@ -100,16 +97,20 @@ describe("Lifts union in RHS over final projection and", () => {
 
 describe("Does not lift a union in RHS over final projection and", () => {
     test("left join", () => {
-        expectQueryBodyUnmodified((f, A, B, C) => {
+        expectQueryDecompBodiesEquivalence((f, A, B, C) => {
+            const inputQueryBody = F.createLeftJoin(A, F.createUnion(B, C));
             return {
-                input: F.createLeftJoin(A, F.createUnion(B, C)),
+                inputQueryBody,
+                expectedSubqueryBodies: [inputQueryBody],
             };
         });
     });
     test("minus", () => {
-        expectQueryBodyUnmodified((f, A, B, C) => {
+        expectQueryDecompBodiesEquivalence((f, A, B, C) => {
+            const inputQueryBody = F.createMinus(A, F.createUnion(B, C));
             return {
-                input: F.createMinus(A, F.createUnion(B, C)),
+                inputQueryBody,
+                expectedSubqueryBodies: [inputQueryBody],
             };
         });
     });
@@ -158,11 +159,13 @@ it("Flattens joins during decomposition", () => {
 });
 
 test("Only immovable union", () => {
-    expectQueryBodyUnmodified((f, A, B, C) => {
+    expectQueryDecompBodiesEquivalence((f, A, B, C) => {
+        const inputQueryBody = F.createMinus(A, F.createUnion(B, C));
         return {
-            input: F.createMinus(A, F.createUnion(B, C)),
+            inputQueryBody,
+            expectedSubqueryBodies: [inputQueryBody],
         };
-    }, moveUnionsToTop);
+    });
 });
 
 describe("Complex queries with unions that cannot be moved", () => {

@@ -1,32 +1,32 @@
 import { SetC } from "../utils.js";
 
-import { Algebra } from "./index.js";
+import { QueryTree } from "./index.js";
 
-export interface QueryNode<T extends Algebra.Operand> {
+export interface QueryNode<T extends QueryTree.Operand> {
     value: T;
     parentIdx: number | null;
 }
-export interface QueryNodeWithParent<T extends Algebra.Operand> extends QueryNode<T> {
+export interface QueryNodeWithParent<T extends QueryTree.Operand> extends QueryNode<T> {
     parentIdx: NonNullable<QueryNode<T>["parentIdx"]>;
 }
 
-export interface QueryNodeWithAncestors<V extends Algebra.Operand> {
-    ancestors: QueryNode<Algebra.Operation>[];
+export interface QueryNodeWithAncestors<V extends QueryTree.Operand> {
+    ancestors: QueryNode<QueryTree.Operation>[];
     value: QueryNode<V>;
 }
 
 export interface TraversalState {
-    path: QueryNode<Algebra.Operation>[];
+    path: QueryNode<QueryTree.Operation>[];
     pathNextChildToVisitIdx: number[];
 }
 
-export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
+export function findFirstOpOfType<K extends QueryTree.Operation["type"]>(
     opType: K,
-    root: Algebra.Operation,
-    ignoredSubTrees: SetC<Algebra.Operation>,
-    ignoredNodes: SetC<Algebra.Operation>,
+    root: QueryTree.Operation,
+    ignoredSubTrees: SetC<QueryTree.Operation>,
+    ignoredNodes: SetC<QueryTree.Operation>,
     state?: TraversalState,
-): [QueryNodeWithAncestors<Algebra.OperandTypeMapping[K]>, TraversalState] | null {
+): [QueryNodeWithAncestors<QueryTree.OperandTypeMapping[K]>, TraversalState] | null {
     // Keep state needed for traversal separate, so we can directly return the ancestors
     const path = state?.path ?? [{ value: root, parentIdx: null }];
     const pathNextChildToVisitIdx = state?.pathNextChildToVisitIdx ?? [0];
@@ -45,7 +45,7 @@ export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
             continue;
         }
 
-        let nextToVisit: Algebra.Operand | null = null;
+        let nextToVisit: QueryTree.Operand | null = null;
         if (Array.isArray(nodeOp.input)) {
             if (nextChildToVisitIdx < nodeOp.input.length) {
                 nextToVisit = nodeOp.input[nextChildToVisitIdx]!;
@@ -65,7 +65,7 @@ export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
             // All of the node's children have been visited
             const v = path.pop()!;
             pathNextChildToVisitIdx.pop();
-            if (Algebra.isOfType(nodeOp, opType) && !ignoredNodes.has(nodeOp)) {
+            if (QueryTree.isOfType(nodeOp, opType) && !ignoredNodes.has(nodeOp)) {
                 return [
                     { ancestors: path, value: { value: nodeOp, parentIdx: v.parentIdx } },
                     { path, pathNextChildToVisitIdx },
@@ -77,6 +77,6 @@ export function findFirstOpOfType<K extends Algebra.Operation["type"]>(
     return null;
 }
 
-function isOp(x: Algebra.Operand): x is Algebra.Operation {
+function isOp(x: QueryTree.Operand): x is QueryTree.Operation {
     return "input" in x;
 }

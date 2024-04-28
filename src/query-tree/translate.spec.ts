@@ -1,14 +1,13 @@
 import { strict as assert } from "node:assert";
 
 import { describe, expect, it, test } from "@jest/globals";
-import { translate as externalTranslate, toSparql as externalToSparql } from "sparqlalgebrajs";
 
-import { expectQueryEquivalence } from "../../tests/utils/expect-query.js";
 import { OperandFactory, OperandFactory as F } from "../../tests/utils/operand-factory.js";
+import { expectQueryEquivalence } from "../../tests/utils/query-tree/expect.js";
 
 import { translate } from "./translate.js";
 
-import { Algebra } from "./index.js";
+import { QueryTree } from "./index.js";
 
 it("Does not support solution modifiers", () =>
     expect(() =>
@@ -37,7 +36,7 @@ describe("Everything query", () => {
             FILTER (?s)
         }`;
     const input = translate(inputS);
-    assert(Algebra.isOfType(input, Algebra.types.PROJECT));
+    assert(input.type === QueryTree.types.PROJECT);
 
     const expected = F.createProject(
         F.createFilter(
@@ -49,7 +48,10 @@ describe("Everything query", () => {
     test("Forward translation", () => {
         expectQueryEquivalence(input, expected);
     });
-    test("Backwards translation", () => {
-        expect(Algebra.toSparql(input)).toBe(externalToSparql(externalTranslate(inputS)));
+
+    test("Forward followed by round-trip translation", () => {
+        const found = QueryTree.translate(QueryTree.toSparql(input));
+        assert(found.type === QueryTree.types.PROJECT);
+        expectQueryEquivalence(found, expected);
     });
 });
