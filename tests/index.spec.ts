@@ -70,7 +70,7 @@ it("Lifts a union over final projection and filter", () => {
 });
 
 describe("Lifts a left-hand side union over final projection and", () => {
-    function expectOpDistributesUnion<O extends QueryTree.BinaryOrMoreOp>(createOp: CreateMultiOp<O>) {
+    function expectOpDistributesUnion<O extends QueryTree.OpThatTakesTwoOrMoreOperands>(createOp: CreateMultiOp<O>) {
         expectQueryDecompBodiesEquivalence((f, A, B, C) => {
             return {
                 inputQueryBody: createOp(F.createUnion(A, B), C),
@@ -150,9 +150,8 @@ test("Lifts union over final projection and associative operator with 3 operands
 
 it("Flattens joins during decomposition", () => {
     expectQueryDecompBodiesEquivalence((f, A, B, C, D, E) => {
-        const input = F.createJoin(F.createUnion(F.createJoin(A, B), F.createJoin(C, D)), E);
         return {
-            inputQueryBody: input,
+            inputQueryBody: F.createJoin(F.createUnion(F.createJoin(A, B), F.createJoin(C, D)), E),
             expectedSubqueryBodies: [F.createJoin(A, B, E), F.createJoin(C, D, E)],
         };
     });

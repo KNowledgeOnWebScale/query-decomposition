@@ -16,7 +16,7 @@ export function rewriteUnionToAboveUnaryOp(parentUnary: QueryTree.UnaryOp, union
 }
 
 export function rewriteUnionToAboveBinaryOrMoreOp(
-    parentBinary: QueryTree.BinaryOrMoreOp,
+    parentBinary: QueryTree.OpThatTakesTwoOrMoreOperands,
     unionOp: QueryTree.Union,
 ): QueryTree.Union {
     const childIdx = parentBinary.input.indexOf(unionOp);
@@ -34,7 +34,11 @@ export function rewriteUnionToAboveBinaryOrMoreOp(
     return newParent as QueryTree.Union;
 }
 
-function replaceChildAtIdx(parent: QueryTree.BinaryOrMoreOp, childIdx: number, newChild: QueryTree.Operand) {
+function replaceChildAtIdx(
+    parent: QueryTree.OpThatTakesTwoOrMoreOperands,
+    childIdx: number,
+    newChild: QueryTree.Operand,
+) {
     if (parent.type === newChild.type && parent.type === QueryTree.types.JOIN) {
         // Associative property
         parent.input.splice(childIdx, 1, ...structuredClone(newChild.input));

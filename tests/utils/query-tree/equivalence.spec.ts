@@ -9,7 +9,7 @@ import { OperandFactory as F, type CreateMultiOp } from "../operand-factory.js";
 import { expectNotQueryBodyEquivalence, expectQueryBodyEquivalence, type QueryTransformer } from "./expect-body.js";
 import { expectNotQueryEquivalence, expectQueryEquivalence } from "./expect.js";
 
-type createMultiOp = (...operands: QueryTree.BinaryOp["input"]) => QueryTree.BinaryOrMoreOp;
+type createMultiOp = (...operands: QueryTree.BinaryOp["input"]) => QueryTree.OpThatTakesTwoOrMoreOperands;
 
 function checkCommutative(
     createOp: createMultiOp,
@@ -72,7 +72,7 @@ function expectNotAssociative(createOp: createMultiOp) {
 }
 
 const binaryOps: {
-    [K in QueryTree.BinaryOrMoreOp["type"]]: {
+    [K in QueryTree.OpThatTakesTwoOrMoreOperands["type"]]: {
         name: string;
         createOp: CreateMultiOp<QueryTree.OperandTypeMapping[K]>;
         commutative: boolean;
@@ -174,9 +174,9 @@ describe("BGP", () => {
     });
 });
 
-describe("Different number of operands to", () => {
+describe("Different number of operands", () => {
     const ternaryOrMoreOps: {
-        [K in QueryTree.TernaryOrMoreOp["type"]]: {
+        [K in QueryTree.OpThatAcceptsThreeOrMoreOperands["type"]]: {
             name: string;
             createOp: CreateMultiOp<QueryTree.OperandTypeMapping[K]>;
         };
@@ -206,9 +206,9 @@ describe("Different number of operands to", () => {
 
 // Technically Union(A, A, B) = Union(A, B) = Union(A, B, B)
 // However since we never create rewrites like this, we don't take this into account
-describe("Operand comparison is count-sensitive for ternary or more operators", () => {
+describe("Operand comparison is count-sensitive", () => {
     const ternaryOrMoreOps: {
-        [K in QueryTree.TernaryOrMoreOp["type"]]: {
+        [K in QueryTree.OpThatAcceptsThreeOrMoreOperands["type"]]: {
             name: string;
             createOp: CreateMultiOp<QueryTree.OperandTypeMapping[K]>;
         };

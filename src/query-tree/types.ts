@@ -11,7 +11,7 @@ export interface Project extends Unary {
     variables: Hashable[];
 }
 
-export interface Union extends BinaryOrMore {
+export interface Union extends TwoOrMore {
     type: types.UNION;
 }
 
@@ -19,7 +19,7 @@ export interface Minus extends Binary {
     type: types.MINUS;
 }
 
-export interface Join extends BinaryOrMore {
+export interface Join extends TwoOrMore {
     type: types.JOIN;
 }
 
@@ -62,11 +62,11 @@ interface Binary extends BaseOperation {
 }
 export type BinaryOp = Extract<Operation, Binary>;
 
-interface BinaryOrMore extends BaseOperation {
+interface TwoOrMore extends BaseOperation {
     input: ArrayMinLength<Operand, 2>;
 }
-export type BinaryOrMoreOp = Extract<Operation, BinaryOrMore>;
-export type TernaryOrMoreOp = Exclude<BinaryOrMoreOp, BinaryOp>;
+export type OpThatTakesTwoOrMoreOperands = Extract<Operation, TwoOrMore>;
+export type OpThatAcceptsThreeOrMoreOperands = Exclude<OpThatTakesTwoOrMoreOperands, BinaryOp>;
 
 //
 // Type Guards

@@ -8,7 +8,7 @@ import { inScopeVariables } from "./index.js";
 import type { ArrayMinLength, Hashable } from "@src/utils.js";
 import type { Algebra as ExternalAlgebra } from "sparqlalgebrajs";
 
-export type CreateMultiOp<O extends QueryTree.BinaryOrMoreOp> = (...operands: O["input"]) => O;
+export type CreateMultiOp<O extends QueryTree.OpThatTakesTwoOrMoreOperands> = (...operands: O["input"]) => O;
 
 export class OperandFactory {
     private id = 0;
