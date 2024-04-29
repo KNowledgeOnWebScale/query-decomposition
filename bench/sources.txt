@@ -1,0 +1,8 @@
+GraphDB implementations of:
+- https://github.com/ldbc/ldbc_snb_interactive_v1_impls/tree/main
+    - graphdb/queries/*.rq
+    - https://repository.surfsara.nl/datasets/cwi/ldbc-snb-interactive-v1-datagen-v100#files
+- https://github.com/ldbc/ldbc_spb_bm_2.0/tree/master -> https://github.com/ldbc/ldbc_spb_bm_2.0/tree/master/datasets_and_queries/sparql
+    - datasets_and_queries/sparql/**/*.txt
+
+formats: https://repository.surfsara.nl/datasets/cwi/snb
