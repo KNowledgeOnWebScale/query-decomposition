@@ -174,12 +174,30 @@ describe("BGP", () => {
     });
 });
 
-test("Different number of operands join", () => {
-    expectNotQueryBodyEquivalence((f, A, B, C) => {
-        return {
-            inputQueryBody: F.createJoin(A, B, C),
-            expectedQueryBody: F.createJoin(A, B),
+describe("Different number of operands to", () => {
+    const ternaryOrMoreOps: {
+        [K in QueryTree.TernaryOrMoreOp["type"]]: {
+            name: string;
+            createOp: CreateMultiOp<QueryTree.OperandTypeMapping[K]>;
         };
+    } = {
+        [QueryTree.types.JOIN]: {
+            name: "Join",
+            createOp: F.createJoin,
+        },
+        [QueryTree.types.UNION]: {
+            name: "Union",
+            createOp: F.createUnion,
+        },
+    };
+
+    test.each(Object.values(ternaryOrMoreOps))("$name operator", ternaryOrMoreOp => {
+        expectNotQueryBodyEquivalence((f, A, B, C) => {
+            return {
+                inputQueryBody: ternaryOrMoreOp.createOp(A, B, C),
+                expectedQueryBody: ternaryOrMoreOp.createOp(A, B),
+            };
+        });
     });
 });
 
