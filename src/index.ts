@@ -12,13 +12,19 @@ export function maximallyDecomposeQuery(query: string): ArrayMinLength<string, 1
 }
 
 export function maximallyDecomposeQueryTree(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
-    const normalizedRewrittenRoot = moveUnionsToTop(root);
+    return maximallyDecomposeQueryTree_(structuredClone(root));
+}
 
-    if (normalizedRewrittenRoot.input.type !== QueryTree.types.UNION) {
-        return [normalizedRewrittenRoot];
+function maximallyDecomposeQueryTree_(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
+    return decomposeQueryTree(moveUnionsToTop(root));
+}
+
+export function decomposeQueryTree(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
+    if (root.input.type !== QueryTree.types.UNION) {
+        return [root];
     }
 
-    const subqueryRoots = normalizedRewrittenRoot.input.input;
+    const subqueryRoots = root.input.input;
     assert(subqueryRoots.every(elem => elem.type === QueryTree.types.PROJECT));
     return subqueryRoots as ArrayMinLength<QueryTree.Project, 2>;
 }

@@ -1,9 +1,5 @@
-node_modules
-
-solid_server/data
-
-tsconfig.tsbuildinfo
-
-/.eslintcache
-
+.eslintcache
+.vscode
 coverage
+node_modules
+tsconfig.tsbuildinfo

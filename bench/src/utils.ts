@@ -1,5 +1,5 @@
-import * as path from "node:path"
 import * as fs from "node:fs/promises"
+import * as path from "node:path"
 import { fileURLToPath } from 'node:url';
 
 
@@ -20,11 +20,17 @@ export async function getContentsOfFilesInDir(dir: Path, filesFilter: (filePath:
                         const content = await fs.readFile(filePath, "utf-8");
                         return [filePath, content] as const;
                     } catch (err) {
-                        throw new Error(`Reading query file: ${err}`);
+                        throw new Error(`Reading query file: ${new String(err).toString()}`);
                     }
                 })
         )
     } catch (err) {
-        throw new Error(`Reading query directory: ${err}`);
+        throw new Error(`Reading query directory: ${new String(err).toString()}`);
     }
+}
+
+export function roughSizeOf(a: unknown): number {
+    const s = JSON.stringify(a).replace(/[\[\],"]/g, ""); //stringify and remove all "stringification" extra data
+
+    return new Blob([s]).size; // size of utf-8 string in bytes
 }
