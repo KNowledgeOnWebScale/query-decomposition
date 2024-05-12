@@ -1,50 +1,77 @@
 import * as path from "node:path";
-import { getQueries } from "./queries.js";
-import { PROJECT_DIR } from "./utils.js";
-import {strict as assert} from "node:assert"
+import { exit } from "node:process";
 
-import { maximallyDecomposeQueryTree, Algebra } from "move-sparql-unions-to-top"
 import { executeQuery } from "./execute-query.js";
+import { getQueryStrings } from "./get-query-strings.js";
+import { QueryMaterialization } from "./materialization.js";
+import { NaiveQueryMaterialization } from "./naive-materialization.js";
+import { PROJECT_DIR } from "./utils.js";
 
 
 const QUERY_TEMPLATES_DIR = path.join(PROJECT_DIR, "./query-templates");
 const QUERY_SUBSTITUTIONS_DIR = path.join(PROJECT_DIR, "./substitution_parameters");
 
-const queries = await getQueries(QUERY_TEMPLATES_DIR, QUERY_SUBSTITUTIONS_DIR);
+const queryStrings = await getQueryStrings(QUERY_TEMPLATES_DIR, QUERY_SUBSTITUTIONS_DIR);
+// //console.log((await executeQuery(queries[0]!)).map(x => x.toString()))
+// console.log(queries)
+// exit(1);
 
-const materializedQueries: [Algebra.Project, Awaited<ReturnType<typeof executeQuery>>[]][] = [];
+//queries.length = 1
 
-for (const query of queries) {
-    const queryRoot = Algebra.translate(query);
-    assert(queryRoot.type === Algebra.types.PROJECT);
+const queryMaterialization = new QueryMaterialization();
+const naiveQueryMaterialization = new NaiveQueryMaterialization();
 
-    const subqueries = maximallyDecomposeQueryTree(queryRoot);
-
-    const subqueriesResults = await Promise.all(
-        subqueries.map(subquery => {
-            const q = materializedQueries.find(([queryRoot,]) => Algebra.areEquivalent(queryRoot, subquery));
-
-            if (q !== undefined) {
-                // hitCount + 1 or cached size + q[1].size ?? 
-            }
-    
-            return q !== undefined ? Promise.resolve(q[1]) : executeQuery(Algebra.toSparql(subquery) + "\nLIMIT 2").then(x => [x]);
-        })
-    );
-
-    materializedQueries.push([
-        queryRoot,
-        subqueriesResults.flat()
-    ]);
-
-    // console.log("EXECUTING", subqueries);
-    // const q = `
-    //     SELECT ?personId ?p2 WHERE {
-    //     ?rootPerson <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/Person>;
-    //       <http://www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/id> ?personId.
-    //     }
-    //     LIMIT 2
-    // `
-
-    //console.log((await executeQuery(subqueries[0]!)).map(bind => bind.toString()));
+if (queryStrings.length === 0) {
+    exit(0);
 }
+
+const PADDING = 30;
+
+console.log("=".repeat(100))
+for (const queryS of queryStrings) {
+    const start = performance.now();
+    await executeQuery(queryS);
+    const end = performance.now();
+    console.log(`Time taken to warmup (naively compute answer to query once): ${end - start} ms`)
+
+    printSeparator()
+    console.log("Naive materialization")
+    console.group()
+
+    await naiveQueryMaterialization.answerQuery(queryS);
+    
+    const naiveMViewSize = naiveQueryMaterialization.roughSizeOfMaterializedViews()
+    console.log("Rough size of naive materialization views:")
+    console.group()
+    console.log("Bytes:".padEnd(PADDING), naiveMViewSize)
+    console.log("Ratio answers/query in %:".padEnd(PADDING), (naiveMViewSize.answers / naiveMViewSize.queries * 100).toFixed(3))
+    console.groupEnd()
+
+    console.groupEnd()
+
+    printSeparator()
+    console.log("Materialization")
+    console.group()
+
+    //await setTimeout(5000);
+
+    await queryMaterialization.answerQuery(queryS);
+
+    const mViewSize = queryMaterialization.roughSizeOfMaterializedViews()
+    console.log("Rough size of materialization views:")
+    console.group()
+    console.log("Bytes:".padEnd(PADDING), mViewSize)
+    console.log("Ratio answers/query in %:".padEnd(PADDING), (mViewSize.answers / mViewSize.queries * 100).toFixed(3))
+    console.log("Ratio non-naive/naive in %:".padEnd(PADDING), {queries: `${(mViewSize.queries / naiveMViewSize.queries * 100).toFixed(3)} %`, answers: `${(mViewSize.answers / naiveMViewSize.answers * 100).toFixed(3)} %`})
+    console.groupEnd()
+
+    console.groupEnd()
+    
+    printSeparator()
+}
+
+function printSeparator() {
+    console.log("=".repeat(100))
+}
+
+//console.log(materializedQueries)

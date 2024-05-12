@@ -3,10 +3,8 @@
     "author": "Thibeau Vercruyssen",
     "version": "0.1.0",
     "type": "module",
-    "main": "src/index.js",
     "scripts": {
-        "start": "node --loader ts-node/esm src/index.ts",
-        "start:debug": "DEBUG=move-sparql-unions-to-top:* node --loader ts-node/esm --inspect-brk src/index.ts",
+        "build": "tsc && resolve-tspaths",
         "tests": "jest",
         "tests:debug": "DEBUG=move-sparql-unions-to-top:* node --inspect-brk node_modules/.bin/jest --runInBand",
         "prepare": "husky install"
@@ -17,7 +15,6 @@
         "ts-node": "^10.9.1"
     },
     "devDependencies": {
-        "@golevelup/ts-jest": "^0.4.0",
         "@jest/globals": "^29.7.0",
         "@rdfjs/types": "^1.1.0",
         "@types/debug": "^4.1.12",
@@ -38,9 +35,10 @@
         "jest": "^29.7.0",
         "lint-staged": "^15.2.2",
         "prettier": "^3.2.5",
+        "resolve-tspaths": "^0.8.18",
         "ts-jest": "^29.1.2",
         "ts-jest-resolver": "^2.0.1",
         "tsc-files": "^1.1.4",
-        "typescript": "^5.4.3"
+        "typescript": "^5.4.5"
     }
 }
