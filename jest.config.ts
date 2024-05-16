@@ -13,6 +13,7 @@ const config: Config = {
     },
     collectCoverageFrom: ["<rootDir>/**/*.ts"],
     verbose: true,
+    modulePaths: [compilerOptions.baseUrl],
     moduleNameMapper: pathsToModuleNameMapper(compilerOptions.paths, { useESM: true }),
 };
 

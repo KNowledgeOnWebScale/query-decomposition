@@ -1,9 +1,10 @@
 {
     "extends": "../tsconfig.json",
     "compilerOptions": {
+        "typeRoots": ["./node_modules/@types", "./src/types"],
         "paths": {},
         "noEmit": true,
-        "target": "es2020",
+        "target": "es2020"
     },
-    "include": ["src/**/*"],
+    "include": ["src/**/*"]
 }

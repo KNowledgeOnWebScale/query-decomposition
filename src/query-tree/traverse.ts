@@ -56,7 +56,7 @@ export function findFirstOpOfType<K extends QueryTree.Operation["type"]>(
             }
         }
         if (nextToVisit !== null) {
-            pathNextChildToVisitIdx[pathNextChildToVisitIdx.length - 1] += 1;
+            pathNextChildToVisitIdx[pathNextChildToVisitIdx.length - 1]! += 1;
             if (isOp(nextToVisit)) {
                 path.push({ value: nextToVisit, parentIdx: nextChildToVisitIdx });
                 pathNextChildToVisitIdx.push(0);

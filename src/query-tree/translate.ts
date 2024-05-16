@@ -71,8 +71,8 @@ export function _translate(op: AlgebraExternal.Operation): Algebra.Operand {
     }
 }
 
-export function toSparql(query: Algebra.Project): string {
-    return toSparqlExternal(reverseTranslate(query));
+export function toSparql(query: Algebra.Project, options?: { explicitDatatype: boolean }): string {
+    return toSparqlExternal(reverseTranslate(query), options);
 }
 
 export function reverseTranslate(op: Algebra.Operand): AlgebraExternal.Operation {
