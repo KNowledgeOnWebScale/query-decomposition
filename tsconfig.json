@@ -1,14 +1,15 @@
 {
     "compilerOptions": {
         "rootDir": "./",
+        "baseUrl": "./",
         "outDir": "dist",
         "typeRoots": ["./node_modules/@types", "./src/types"],
         "module": "nodenext",
         "lib": ["ES2021"],
         "target": "es2020",
         "paths": {
-            "@src/*": ["./src/*"],
-            "@tests/*": ["./tests/*"]
+            "@src/*": ["src/*"],
+            "@tests/*": ["tests/*"]
         },
         "allowSyntheticDefaultImports": true,
         "composite": true,

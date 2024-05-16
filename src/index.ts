@@ -8,7 +8,7 @@ import type { ArrayMinLength } from "./utils.js";
 export function maximallyDecomposeQuery(query: string): ArrayMinLength<string, 1> {
     const root = QueryTree.translate(query);
     assert(root.type === QueryTree.types.PROJECT);
-    return maximallyDecomposeQueryTree(root).map(QueryTree.toSparql);
+    return maximallyDecomposeQueryTree(root).map(x => QueryTree.toSparql(x));
 }
 
 export function maximallyDecomposeQueryTree(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
