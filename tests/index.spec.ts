@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 
 import { describe, expect, it, test } from "@jest/globals";
 
-import { maximallyDecomposeQuery } from "@src/index.js";
+import { maximallyDecomposeSelectQuery } from "@src/index.js";
 import { QueryTree } from "@src/query-tree/index.js";
 import { translate } from "@src/query-tree/translate.js";
 
@@ -30,7 +30,7 @@ it("Does not modify a query string with no union operations", () => {
         SELECT * WHERE { 
             { {${A.s}} OPTIONAL {${B.s}} } . {${C.s}}
         }`;
-    const foundSubqueryStrings = maximallyDecomposeQuery(inputS);
+    const foundSubqueryStrings = maximallyDecomposeSelectQuery(inputS);
     expect(foundSubqueryStrings).toHaveLength(1);
     const foundSubQuery = translate(foundSubqueryStrings[0]);
     assert(foundSubQuery.type === QueryTree.types.PROJECT);
