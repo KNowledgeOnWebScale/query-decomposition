@@ -5,7 +5,15 @@ import { SetC } from "../utils.js";
 
 import { rewriteUnionToAboveBinaryOrMoreOp, rewriteUnionToAboveUnaryOp } from "./rules.js";
 
-export function rewriteUnionsToTop<T extends QueryTree.Operation>(root: T): T | QueryTree.Union {
+/**
+ * @returns The index of the first bad node from the root if present
+ */
+export type AdditionalChecksCb = (unionWAncestors: QueryTree.QueryNodeWithAncestors<QueryTree.Union>) => number | null;
+
+export function rewriteUnionsToTop<T extends QueryTree.Operation>(
+    root: T,
+    additionalChecksCb?: AdditionalChecksCb,
+): T | QueryTree.Union {
     let newRoot: T | QueryTree.Union = root;
 
     const ignoredUnions = new SetC<QueryTree.Union>(); // Unions that cannot be moved all the way up
@@ -21,7 +29,7 @@ export function rewriteUnionsToTop<T extends QueryTree.Operation>(root: T): T | 
         traversalState = traversalResult[1];
 
         try {
-            newRoot = rewriteUnionToTop(unionOpWAncestors);
+            newRoot = rewriteUnionToTop(unionOpWAncestors, additionalChecksCb);
             ignoredUnions.add(newRoot); // Skip top-level unions
             traversalState = undefined; // Tree has changed
             // console.log(
@@ -34,25 +42,25 @@ export function rewriteUnionsToTop<T extends QueryTree.Operation>(root: T): T | 
         } catch (err) {
             assert(err instanceof BadNodeError);
             // Skip all nodes under the bad node, since we are in the RHS of a minus or left-join so no nodes can be moved from under it anymore (LHS could be but is already done)
-            ignoredSubtrees.add(err.node);
+            ignoredSubtrees.add(traversalState!.path[err.badNodeIdx]!.value);
 
             // Avoid a having to traverse to this node again, only to skip it
-            traversalState!.path.length = err.newTraversalStateLength;
-            traversalState!.pathNextChildToVisitIdx.length = err.newTraversalStateLength;
+            traversalState!.path.length = err.badNodeIdx;
+            traversalState!.pathNextChildToVisitIdx.length = err.badNodeIdx;
         }
     }
 
     return newRoot;
 }
 
-export function rewriteUnionToTop(unionWAncestors: QueryTree.QueryNodeWithAncestors<QueryTree.Union>): QueryTree.Union {
-    // Check if union operation occurs in right-hand side operand of an operator present in `BINARY_OPS_LEFT_DISTR_TYPES`
-    const pathToUnion = [...unionWAncestors.ancestors, unionWAncestors.value];
-    for (let i = 0; i < pathToUnion.length - 1; i++) {
-        const parent = pathToUnion[i]!;
-        const v = pathToUnion[i + 1]!;
-        if (QueryTree.isOneOfTypes(parent.value, BINARY_OPS_LEFT_DISTR_TYPES) && v.parentIdx === 1) {
-            throw new BadNodeError(parent.value, i);
+export function rewriteUnionToTop(
+    unionWAncestors: QueryTree.QueryNodeWithAncestors<QueryTree.Union>,
+    additionalChecksCb?: AdditionalChecksCb,
+): QueryTree.Union {
+    if (additionalChecksCb !== undefined) {
+        const badNodeIdx = additionalChecksCb(unionWAncestors);
+        if (badNodeIdx !== null) {
+            throw new BadNodeError(badNodeIdx);
         }
     }
 
@@ -72,13 +80,13 @@ export function rewriteUnionToTop(unionWAncestors: QueryTree.QueryNodeWithAncest
 }
 
 // Unary parent operators that preserves the union operator
-const UNARY_OPERATOR_TYPES = [QueryTree.types.PROJECT, QueryTree.types.FILTER] as const;
+export const UNARY_OPERATOR_TYPES = [QueryTree.types.PROJECT, QueryTree.types.FILTER] as const;
 // Binary parent operators that are distributive over the union operator
-const BINARY_OPS_DISTR_TYPES = [QueryTree.types.JOIN] as const;
+export const BINARY_OPS_DISTR_TYPES = [QueryTree.types.JOIN] as const;
 // Non-commutative binary parent operators that are left-distributive over the union operator
-const BINARY_OPS_LEFT_DISTR_TYPES = [QueryTree.types.LEFT_JOIN, QueryTree.types.MINUS] as const;
+export const BINARY_OPS_LEFT_DISTR_TYPES = [QueryTree.types.LEFT_JOIN, QueryTree.types.MINUS] as const;
 // Binary parent operators that are at least left- or right-distributive over the union operator
-const BINARY_OPS_TYPES_ANY_DISTR_TYPES = [...BINARY_OPS_DISTR_TYPES, ...BINARY_OPS_LEFT_DISTR_TYPES] as const;
+export const BINARY_OPS_TYPES_ANY_DISTR_TYPES = [...BINARY_OPS_DISTR_TYPES, ...BINARY_OPS_LEFT_DISTR_TYPES] as const;
 
 function mergeUnions(parent: QueryTree.Union, child: QueryTree.Union): QueryTree.Union {
     // Associative property of the union operator
@@ -89,10 +97,7 @@ function mergeUnions(parent: QueryTree.Union, child: QueryTree.Union): QueryTree
 }
 
 class BadNodeError extends Error {
-    constructor(
-        public readonly node: QueryTree.Minus | QueryTree.LeftJoin,
-        public readonly newTraversalStateLength: number,
-    ) {
+    constructor(public readonly badNodeIdx: number) {
         super();
     }
 }
