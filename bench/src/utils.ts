@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 import type objectHash from "object-hash";
 import type { StringDigit } from "type-fest/source/internal.js";
 import assert from "node:assert/strict";
+import { QueryTree } from "move-sparql-unions-to-top/src/query-tree/index.js";
+import { Algebra, toSparql } from "sparqlalgebrajs";
+import * as RDF from '@rdfjs/types';
 
 export type Path = string;
 
@@ -58,92 +61,32 @@ export function sortOnHash<T extends objectHash.NotUndefined>(arr: T[]) {
     return hashed.map(x => arr[x.idx]!);
 }
 
-export function calcAvg(arr: number[]): number {
-    if (arr.length === 0) {
-        throw Error("calcAvg with empty array")
-    }
-    return arr.reduce((acc, e) => acc + e, 0) / arr.length;
+// Add explicit datatypes, since virtuoso doesn't handle simply string literals correctly (as per RDF 1.1): https://github.com/openlink/virtuoso-opensource/issues/728
+export function QueryTreeToSparql(q: QueryTree.Project) {
+    return QueryTree.toSparql(q, {explicitDatatype: true}); 
+}
+export function AlgebraToSparql(q: Algebra.Project) {
+    return toSparql(q, {explicitDatatype: true})
 }
 
-export function calcStdDev(arr: number[], avg: number): number {
-    if (arr.length === 0) {
-        throw Error("calStdDev with empty array")
-    }
 
-    const squaredDeviations = arr.map(val => Math.pow(val - avg, 2));
-    const variance = squaredDeviations.reduce((acc, val) => acc + val, 0) / (arr.length);
-
-    return Math.sqrt(variance);
-}
-
-export function calcAvgO<T extends Record<string, number>>(arr: T[]): T {
-    if (arr.length === 0) {
-        throw Error("calcAvgO with empty array")
-    }
-
-    const start = Object.fromEntries(Object.entries(arr[0]!).map(([k, v]) => [k, 0]));
-
-    const ret = arr.reduce((acc, e) => {
-            for (const p of Object.keys(acc)) {
-                if (e === null) {
-                    continue;
-                }
-                acc[p]! += e[p]!;
-            }
-            return acc;
-        }, start);
-
-    for (const k of Object.keys(ret)) {
-        if (ret[k] !== null) {
-            ret[k]! /= arr.length
+export function areEqualTerms(term1: RDF.Term, term2: RDF.Term): boolean {
+    if (term1.termType !== term2.termType) { return false; }
+    switch (term1.termType) {
+        case 'Literal': {
+            const term2_ = <RDF.Literal>term2;
+            return term1.value === term2.value
+                && term1.language === term2_.language
+                && areEqualTerms(term1.datatype, term2_.datatype);
+        } case 'Quad': {
+            const term2_ = <RDF.Quad>term2;
+            return areEqualTerms(term1.subject, term2_.subject)
+                && areEqualTerms(term1.predicate, term2_.predicate)
+                && areEqualTerms(term1.object, term2_.object)
+                && areEqualTerms(term1.graph, term2_.graph);
+        } default: {
+            return term1.value === term2.value;
         }
     }
-
-    return ret as T;
 }
-
-export function calcStdDevO<T extends Record<string, number>>(arr: T[], avgs: T): T {
-    if (arr.length === 0) {
-        throw Error("calStdDevO with empty array")
-    }
-
-    const start = Object.fromEntries(Object.entries(arr[0]!).map(([k, v]) => [k, 0]));
-
-    // variance
-    const ret = arr.reduce((acc, e) => {
-            for (const p of Object.keys(acc)) {
-                if (e === null) {
-                    continue;
-                }
-                acc[p]! += Math.pow(e[p]! - avgs[p]!, 2);
-            }
-            return acc;
-        }, start);
-
-    for (const k of Object.keys(ret)) {
-        if (ret[k] !== null) {
-            ret[k]! /= arr.length
-            ret[k]! = Math.sqrt(ret[k]!)
-        }
-    }
-
-    return ret as T;
-}
-
-export function calcAvgON<T extends Record<string, number>>(arr: (T | null)[]): T | null {
-    if (arr.includes(null)) {
-        assert(arr.every(x => x === null));
-        return null;
-    }
-
-    return calcAvgO<T>(arr as T[]);
-}
-
-export function calcStdDevON<T extends Record<string, number>>(arr: (T | null)[], avgs: T | null): T | null {
-    if (arr.includes(null)) {
-        assert(arr.every(x => x === null));
-        return null;
-    }
-
-    return calcStdDevO<T>(arr as T[], avgs as T);
-}
+// https://github.com/RubenVerborgh/SPARQL.js/blob/ebde86c4bbc52ee1356f10f9c539a30441c8af1d/lib/SparqlGenerator.js#L414-L436

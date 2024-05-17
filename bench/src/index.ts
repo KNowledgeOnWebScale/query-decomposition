@@ -5,22 +5,23 @@ import { executeQuery } from "./execute-query.js";
 import { getQueryStrings } from "./query-strings/get-query-strings.js";
 import { DQMaterialization } from "./query-materialization/decomposed-query.js";
 import { FQMaterialization } from "./query-materialization/full-query.js";
-import { calcAvg, calcAvgO, calcAvgON, PROJECT_DIR, sortOnHash } from "./utils.js";
+import { areEqualTerms, PROJECT_DIR, sortOnHash } from "./utils.js";
 
 import hash from "object-hash"
 import { DQMTimingK, FQMTimingK, TotalTimingK, type DQMTimings, type FQMTimings } from "./timings.js";
 import { exit } from "node:process";
-import { getQueryStringScenarios } from "./create-query-scenarios/index.js";
+import { getQueryStringScenarios as createQueryStringScenarios } from "./create-query-scenarios/index.js";
 import type { Bindings } from "@rdfjs/types";
 import type { RequiredDeep } from "type-fest";
 import { areUnorderedEqual } from "move-sparql-unions-to-top/tests/utils/index.js";
 import { mergeLogs } from "./merge-logs.js";
+import * as RDF from '@rdfjs/types';
+
 
 const QUERY_TEMPLATES_DIR = path.join(PROJECT_DIR, "./query-templates");
 const QUERY_SUBSTITUTIONS_DIR = path.join(PROJECT_DIR, "./substitution_parameters");
 
 //const queryStrings = await getQueryStrings(QUERY_TEMPLATES_DIR, QUERY_SUBSTITUTIONS_DIR);
-let queryStrings = await getQueryStrings(path.join(PROJECT_DIR, "benchs/sp2b/sp2b/queries"));
 //console.log(await executeQuery(queryStrings[0]![1]!))
 //console.log(queryStrings.length)
 // const fq = queryStrings[0]![1]
@@ -42,7 +43,6 @@ let queryStrings = await getQueryStrings(path.join(PROJECT_DIR, "benchs/sp2b/sp2
 
 type mViewSizeLog = {queries: {bytes: number, pct: number}, answers: {bytes: number, pct: number}}
 
-const WARMUP_COUNT = 5;
 type LogRaw = {
     fQMaterialization: { timings?: FQMTimings; mViewSize?: mViewSizeLog};
     dQMaterialization: { timings?: DQMTimings; mViewSize?: mViewSizeLog};
@@ -55,41 +55,87 @@ export type Log = {
     dQMtoFQMViewSizePct: {queries: number, answers: number, total: number}; 
 }
 
-let queryMaterialization: DQMaterialization;
-let naiveQueryMaterialization: FQMaterialization;
+const WARMUP_COUNT = 3;
 
-const queryStrings2 = [queryStrings[0]![1]!]
-//console.log(queryStrings2[0])
-for (const queryS of queryStrings2) {
-    const logs: Log[] = []
+main()
+
+async function main() {
     for (let i = 0; i < WARMUP_COUNT; i++) {
-        queryMaterialization = new DQMaterialization();
-        naiveQueryMaterialization = new FQMaterialization();
-        logs.push(await collectLog(queryS));
+        const start = performance.now();
+        await executeQuery("SELECT * WHERE { ?s ?p ?o } LIMIT 10");
+        const end = performance.now();
+        console.log(`Time taken to warmup (naively compute answer to query once): ${end - start} ms`);
     }
-
-    const {avgs: logAvgs, stdDevs: logStdDevs} = mergeLogs(logs);
     
-    console.log(JSON.stringify(logAvgs, null, 2));
-    //console.log(JSON.stringify(logStdDevs, null, 2));
+    const STABLE_COUNT = 3;
+    
+    let queryStrings = await getQueryStrings(path.join(PROJECT_DIR, "benchs/sp2b/sp2b/queries"));
+    const queryStrings2 = [queryStrings[0]![1]!]
 
+    let fQMaterialization = new FQMaterialization();
+    let dQMaterialization = new DQMaterialization();
 
-    console.log("=".repeat(100));
+    //console.log(queryStrings2[0])
+    for (const queryS of queryStrings2) {
+        let qLogs = {
+            avgs: { fq: {}, changeOne: {}, onlyOne: {} },
+            stdDev: { fq: {}, changeOne: {}, onlyOne: {} },
+        }
+
+        const {changeOne: changeOneQuerySs, onlyOne: onlyOneQuerySs} = createQueryStringScenarios(queryS);
+    
+        let tLogs: Log[] = []
+        for (let i = 0; i < STABLE_COUNT; i++) {
+            fQMaterialization.mViews = [];
+            dQMaterialization.mViews = [];
+            console.log(String("--").repeat(80))
+            tLogs.push(await runQuery(queryS, fQMaterialization, dQMaterialization));
+        }
+        ({avgs: qLogs.avgs.fq, stdDevs: qLogs.stdDev.fq} = mergeLogs(tLogs));
+        tLogs = []
+    
+        const FQMFullQueryState = structuredClone(fQMaterialization.mViews);
+        const DQMFullQueryState = structuredClone(dQMaterialization.mViews);
+    
+        for (const changeOneQueryS of changeOneQuerySs) {
+            for (let i = 0; i < STABLE_COUNT; i++) {
+                fQMaterialization.mViews = structuredClone(FQMFullQueryState);
+                dQMaterialization.mViews = structuredClone(DQMFullQueryState);
+                tLogs.push(await runQuery(changeOneQueryS, fQMaterialization, dQMaterialization));
+            }
+        }
+        ({avgs: qLogs.avgs.changeOne, stdDevs: qLogs.stdDev.changeOne} = mergeLogs(tLogs));
+        tLogs = []
+
+        for (const onlyOneQueryS of onlyOneQuerySs) {
+            for (let i = 0; i < STABLE_COUNT; i++) {
+                fQMaterialization.mViews = structuredClone(FQMFullQueryState);
+                dQMaterialization.mViews = structuredClone(DQMFullQueryState);
+                tLogs.push(await runQuery(onlyOneQueryS, fQMaterialization, dQMaterialization));
+            }
+        }
+        ({avgs: qLogs.avgs.onlyOne, stdDevs: qLogs.stdDev.onlyOne} = mergeLogs(tLogs));
+        tLogs = []
+        
+        console.log(JSON.stringify(qLogs, null, 2));    
+    
+        console.log("=".repeat(100));
+    }
 }
 
-async function collectLog(queryS: string): Promise<Log> {
-    const start = performance.now();
-    await executeQuery(queryS);
-    const end = performance.now();
-    console.log(`Time taken to warmup (naively compute answer to query once): ${end - start} ms`);
+async function runQuery(queryS: string, fQMaterialization: FQMaterialization, dQMaterialization: DQMaterialization): Promise<Log> {
+    // const start = performance.now();
+    // await executeQuery(queryS);
+    // const end = performance.now();
+    // console.log(`Time taken to warmup (naively compute answer to query once): ${end - start} ms`);
 
     const log: LogRaw = { fQMaterialization: {}, dQMaterialization: {} };
 
     let fQMAnswer: Bindings[];
     {
-        [fQMAnswer, log.fQMaterialization.timings] = await naiveQueryMaterialization.answerQuery(queryS);
+        [fQMAnswer, log.fQMaterialization.timings] = await fQMaterialization.answerQuery(queryS);
     
-        const viewSize = naiveQueryMaterialization.roughSizeOfMaterializedViews();
+        const viewSize = fQMaterialization.roughSizeOfMaterializedViews();
         const total = viewSize.queries + viewSize.answers;
         log.fQMaterialization.mViewSize = {
             queries: { bytes: viewSize.queries, pct: viewSize.queries / total },
@@ -99,9 +145,9 @@ async function collectLog(queryS: string): Promise<Log> {
 
     let dQMAnswer: Bindings[];
     {
-        [dQMAnswer, log.dQMaterialization.timings] = await queryMaterialization.answerQuery(queryS);
+        [dQMAnswer, log.dQMaterialization.timings] = await dQMaterialization.answerQuery(queryS);
     
-        const viewSize = queryMaterialization.roughSizeOfMaterializedViews();
+        const viewSize = dQMaterialization.roughSizeOfMaterializedViews();
         const total = viewSize.queries + viewSize.answers
         log.dQMaterialization.mViewSize = {
             queries: { bytes: viewSize.queries, pct: viewSize.queries / total },
@@ -115,7 +161,12 @@ async function collectLog(queryS: string): Promise<Log> {
         total: (log.dQMaterialization.mViewSize.queries.bytes +  log.dQMaterialization.mViewSize.answers.bytes) / (log.fQMaterialization.mViewSize.queries.bytes + log.dQMaterialization.mViewSize.answers.bytes)
     } 
 
-    assert(areUnorderedEqual(fQMAnswer, dQMAnswer, (x, y) => x.equals(y)))
+    assert(areUnorderedEqual(fQMAnswer, dQMAnswer, (x, y) => {
+        // After a `structuredClone` only plain objects are left...
+        const a = (x as any).entries._root.entries as [string, RDF.Term][];
+        const b = (y as any).entries._root.entries as [string, RDF.Term][];
+        return areUnorderedEqual(a, b, (c, d) => c[0] === d[0] && areEqualTerms(c[1], d[1]))
+    }))
 
     return log as Log;
 }

@@ -13,7 +13,7 @@ import { QueryResolver } from "./query-resolver.js";
 import type { Bindings } from "@rdfjs/types";
 
 export class FQMaterialization implements QueryResolver {
-    private readonly mViews: { query: Algebra.Project; answer: Awaited<ReturnType<typeof executeQuery>> }[] = [];
+    mViews: { query: Algebra.Project; answer: Awaited<ReturnType<typeof executeQuery>> }[] = [];
 
     async answerQuery(queryS: string): Promise<[Bindings[], FQMTimings]> {
         const timings = createRawFQMTimings();
