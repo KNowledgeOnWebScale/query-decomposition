@@ -10,7 +10,7 @@ import { rewriteUnionToAboveBinaryOrMoreOp, rewriteUnionToAboveUnaryOp } from ".
 
 const debug = createDebug(`${PACKAGE_NAME}:move-unions-to-top`);
 
-export function moveUnionsToTop(query: QueryTree.Project): QueryTree.Project {
+export function rewriteUnionsToTop(query: QueryTree.Project): QueryTree.Project {
     let newQuery: QueryTree.Operation = query;
 
     const ignoredUnions = new SetC<QueryTree.Union>(); // Unions that cannot be moved all the way up
@@ -33,7 +33,7 @@ export function moveUnionsToTop(query: QueryTree.Project): QueryTree.Project {
         assert(unionOpWAncestors.ancestors.length !== 0 && unionOpWAncestors.value.parentIdx !== null); // Invariant: union is not top-level
 
         try {
-            newQuery = moveUnionToTop(unionOpWAncestors);
+            newQuery = rewriteUnionToTop(unionOpWAncestors);
             ignoredUnions.add(newQuery); // Skip top-level unions
             traversalState = undefined; // Tree has changed
             debug(
@@ -74,7 +74,9 @@ const BINARY_OPS_LEFT_DISTR_TYPES = [QueryTree.types.LEFT_JOIN, QueryTree.types.
 // Binary parent operators that are at least left- or right-distributive over the union operator
 const BINARY_OPS_TYPES_ANY_DISTR_TYPES = [...BINARY_OPS_DISTR_TYPES, ...BINARY_OPS_LEFT_DISTR_TYPES] as const;
 
-export function moveUnionToTop(unionOpWAncestors: QueryTree.QueryNodeWithAncestors<QueryTree.Union>): QueryTree.Union {
+export function rewriteUnionToTop(
+    unionOpWAncestors: QueryTree.QueryNodeWithAncestors<QueryTree.Union>,
+): QueryTree.Union {
     // Check if union operation occurs in right-hand side operand of an operator present in `BINARY_OPS_LEFT_DISTR_TYPES`
     const check = unionOpWAncestors.ancestors.slice();
     check.push(unionOpWAncestors.value);
@@ -90,27 +92,27 @@ export function moveUnionToTop(unionOpWAncestors: QueryTree.QueryNodeWithAncesto
     while (true) {
         const parentOp = unionOpWAncestors.ancestors.pop()!.value;
 
-        let newOp: QueryTree.Union;
         if (QueryTree.isOneOfTypes(parentOp, BINARY_OPS_TYPES_ANY_DISTR_TYPES)) {
-            newOp = rewriteUnionToAboveBinaryOrMoreOp(parentOp, unionOp);
+            unionOp = rewriteUnionToAboveBinaryOrMoreOp(parentOp, unionOp);
         } else if (QueryTree.isOneOfTypes(parentOp, UNARY_OPERATOR_TYPES)) {
-            newOp = rewriteUnionToAboveUnaryOp(parentOp, unionOp);
+            unionOp = rewriteUnionToAboveUnaryOp(parentOp, unionOp);
         } else {
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            assert(parentOp.type === QueryTree.types.UNION);
-            // Associative property of the union operator
-            const childIdx = parentOp.input.indexOf(unionOp);
-            assert(childIdx !== -1);
-            parentOp.input.splice(childIdx, 1, ...unionOp.input); // Replace the child with its inputs
-            newOp = parentOp;
+            unionOp = mergeUnions(parentOp, unionOp);
         }
 
         const parentParent = unionOpWAncestors.ancestors.at(-1);
         if (parentParent === undefined) {
-            return newOp;
+            return unionOp;
         }
-        unionOp = newOp;
     }
+}
+
+function mergeUnions(parent: QueryTree.Union, child: QueryTree.Union): QueryTree.Union {
+    // Associative property of the union operator
+    const childIdx = parent.input.indexOf(child);
+    assert(childIdx !== -1);
+    parent.input.splice(childIdx, 1, ...child.input); // Replace the child with its inputs
+    return parent;
 }
 
 class BadNodeError extends Error {

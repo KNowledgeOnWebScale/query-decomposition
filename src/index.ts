@@ -1,7 +1,7 @@
 import { strict as assert } from "assert";
 
 import { QueryTree } from "./query-tree/index.js";
-import { moveUnionsToTop } from "./rewrite-unions/algorithm.js";
+import { rewriteUnionsToTop } from "./rewrite-unions/algorithm.js";
 
 import type { ArrayMinLength } from "./utils.js";
 
@@ -16,7 +16,7 @@ export function maximallyDecomposeQueryTree(root: QueryTree.Project): ArrayMinLe
 }
 
 function maximallyDecomposeQueryTree_(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
-    return decomposeQueryTree(moveUnionsToTop(root));
+    return decomposeQueryTree(rewriteUnionsToTop(root));
 }
 
 export function decomposeQueryTree(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
