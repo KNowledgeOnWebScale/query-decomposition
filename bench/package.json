@@ -10,10 +10,12 @@
     },
     "dependencies": {
         "@comunica/query-sparql": "=2.10.2",
+        "@types/sparqljs": "^3.1.10",
         "csv-parse": "^5.5.5",
         "move-sparql-unions-to-top": "file:../dist",
         "object-hash": "^3.0.0",
         "sparqlalgebrajs": "^4.3.4",
+        "sparqljs": "^3.7.1",
         "ts-node": "^10.9.1"
     },
     "devDependencies": {

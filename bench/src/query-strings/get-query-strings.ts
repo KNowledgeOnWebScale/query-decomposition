@@ -63,7 +63,7 @@ export async function getQueryStrings2(templates_dir: Path, substitutions_dir: P
             )
 
             ret.push([path.basename(filePath).replace(".sparql", ""), query])
-            //queries.push(...g(query).map(x => toSparql(x)));
+            //queries.push(...g(query).map(x => AlgebraToSparql(x)));
         }
     }
     return ret;

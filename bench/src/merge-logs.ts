@@ -1,6 +1,6 @@
 import type { Log } from "./index.js";
 import { DQMTimingK, FQMTimingK, TotalTimingK } from "./timings.js";
-import { calcAvg, calcAvgO, calcAvgON, calcStdDev, calcStdDevO, calcStdDevON } from "./utils.js";
+import { calcAvg, calcAvgO, calcAvgON, calcStdDev, calcStdDevO, calcStdDevON } from "./stats.js";
 
 export function mergeLogs(logs: Log[]) {
     const avgs: Log = {

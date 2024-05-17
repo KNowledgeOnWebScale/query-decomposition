@@ -9,14 +9,15 @@ import { Algebra, toSparql, translate } from "sparqlalgebrajs";
 import { executeQuery } from "../execute-query.js";
 import { areEquivalent } from "../query-tree/equivalence.js";
 import { addTimingB, computeTotalB, createRawDQMTimings, DQMTimingK, type DQMTimings } from "../timings.js";
-import { roughSizeOf } from "../utils.js";
+import { AlgebraToSparql, roughSizeOf } from "../utils.js";
 
 import { QueryResolver } from "./query-resolver.js";
+import { QueryTreeToSparql } from "../utils.js"
 
 import type { Bindings } from "@rdfjs/types";
 
 export class DQMaterialization implements QueryResolver {
-    private readonly mViews: { query: Algebra.Project; answer: Awaited<ReturnType<typeof executeQuery>>[] }[] = [];
+    mViews: { query: Algebra.Project; answer: Awaited<ReturnType<typeof executeQuery>>[] }[] = [];
 
     async answerQuery(queryS: string): Promise<[Bindings[], DQMTimings]> {
         const timings = createRawDQMTimings();
@@ -49,12 +50,11 @@ export class DQMaterialization implements QueryResolver {
         addTimingB(timings, DQMTimingK.DECOMPOSE_TREE, start);
 
         start = performance.now();
-        // add explicit datatypes, since virtuoso doesn't handle simply string literals correctly: https://github.com/openlink/virtuoso-opensource/issues/728
-        const subqueries = subqueriesTrees.map(x => QueryTree.toSparql(x, {explicitDatatype: true})); 
+        const subqueries = subqueriesTrees.map(x => QueryTreeToSparql(x)); 
         addTimingB(timings, DQMTimingK.TRANSLATE_SQS_TO_REWRITE_TREES, start);
 
         if (subqueries.length === 1) {
-            assert(subqueries[0] === toSparql(query));
+            assert(subqueries[0] === AlgebraToSparql(query));
         }
 
         let timeTakenTranslateSq = 0;
