@@ -1,4 +1,4 @@
-import { maximallyDecomposeQueryTree } from "@src/index.js";
+import { maximallyDecomposeSelectQueryTree } from "@src/index.js";
 import { QueryTree } from "@src/query-tree/index.js";
 import { type ArrayMinLength } from "@src/utils.js";
 
@@ -22,7 +22,7 @@ export function expectQueryDecompBodiesEquivalence(
     const expectedSubqueries = expectedSubqueryBodies.map(x => F.createProject(x));
 
     const input = F.createProject(inputQueryBody);
-    const foundSubqueries = maximallyDecomposeQueryTree(input);
+    const foundSubqueries = maximallyDecomposeSelectQueryTree(input);
 
     if (!areUnorderedEqual(foundSubqueries, expectedSubqueries, areEquivalent)) {
         // const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), packageName));
