@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 
 import { Algebra, translate } from "sparqlalgebrajs";
-import { AlgebraToSparql } from "../utils.js";
+import { AlgebraToSparql as algebraToSparql } from "../utils.js";
 
 export function getQueryStringScenarios(queryS: string): {changeOne: string[], onlyOne: string[]} {
     const q = translate(queryS);
@@ -12,14 +12,22 @@ export function getQueryStringScenarios(queryS: string): {changeOne: string[], o
 
     const ret: ReturnType<typeof getQueryStringScenarios> = {changeOne: [], onlyOne: []}
     for (let i = 0; i < union.input.length; i++) {
-        const qC = structuredClone(q);
-        const union2 = findFirstOfType(Algebra.types.UNION, qC);
-        assert(union2 !== null && union2.input.length >= 2);
-
-        ret.onlyOne.push(AlgebraToSparql({...q, input: structuredClone(union2.input[i]!) }))
-
-        changeFirstBGP(union2.input[i]!);
-        ret.changeOne.push(AlgebraToSparql(qC))
+        {
+            const qC = structuredClone(q);
+            const union2 = findFirstOfType(Algebra.types.UNION, qC);
+            assert(union2 !== null && union2.input.length >= 2);
+            union2.input = [union2.input[i]!]
+            ret.onlyOne.push(algebraToSparql(qC))
+            const t = algebraToSparql(translate(ret.onlyOne.at(-1)!) as Algebra.Project);
+            let i4 = 2;
+        }
+        {
+            const qC2 = structuredClone(q);
+            const union22 = findFirstOfType(Algebra.types.UNION, qC2);
+            assert(union22 !== null && union22.input.length >= 2);
+            changeFirstBGP(union22.input[i]!);
+            ret.changeOne.push(algebraToSparql(qC2))
+        }
     }
     return ret;
 }

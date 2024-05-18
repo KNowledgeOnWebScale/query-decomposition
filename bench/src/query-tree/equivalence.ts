@@ -4,8 +4,20 @@ import { hashObject, hashObjectOrUndefined } from "move-sparql-unions-to-top/src
 import { areOrderedEqual, areUnorderedEqual } from "move-sparql-unions-to-top/tests/utils/index.js"
 import { Util as AlgebraUtil, Algebra } from "sparqlalgebrajs";
 
-type EquivalenceCb<T extends Algebra.Operation> = (a: T, b: T) => boolean
+export function areEquivalent(a: Algebra.Operation, b: Algebra.Operation): boolean {
+    if (a.type !== b.type) {
+        return false;
+    }
 
+    const equiv_cb = EQUIVALENCE_CBS[a.type];
+    assert(equiv_cb !== undefined, `Unsupported Operation type: ${a.type}`)
+
+    // Control flow does not narrow discriminated union types to be the same yet
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+    return equiv_cb(a as any, b as any);
+}
+
+type EquivalenceCb<T extends Algebra.Operation> = (a: T, b: T) => boolean
 const EQUIVALENCE_CBS: {[K in Algebra.types]?: EquivalenceCb<Extract<Algebra.Operation, { type: K }>>} = {
     [Algebra.types.PROJECT]: (a, b) => {
         const aInScopeVariables = new Set(AlgebraUtil.inScopeVariables(a.input).map(hashObject));
@@ -42,16 +54,3 @@ const EQUIVALENCE_CBS: {[K in Algebra.types]?: EquivalenceCb<Extract<Algebra.Ope
         return areUnorderedEqual(a.patterns, b.patterns, (a, b) => hashObject(a) === hashObject(b));
     },
 };
-
-export function areEquivalent(a: Algebra.Operation, b: Algebra.Operation): boolean {
-    if (a.type !== b.type) {
-        return false;
-    }
-
-    const equiv_cb = EQUIVALENCE_CBS[a.type];
-    assert(equiv_cb !== undefined, `Unsupported Operation type: ${a.type}`)
-
-    // Control flow does not narrow discriminated union types to be the same yet
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    return equiv_cb(a as any, b as any);
-}
