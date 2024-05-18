@@ -62,7 +62,7 @@ export function sortOnHash<T extends objectHash.NotUndefined>(arr: T[]) {
 }
 
 // Add explicit datatypes, since virtuoso doesn't handle simply string literals correctly (as per RDF 1.1): https://github.com/openlink/virtuoso-opensource/issues/728
-export function QueryTreeToSparql(q: QueryTree.Project) {
+export function queryTreeToSparql(q: QueryTree.Project) {
     return QueryTree.toSparql(q, {explicitDatatype: true}); 
 }
 export function AlgebraToSparql(q: Algebra.Project) {

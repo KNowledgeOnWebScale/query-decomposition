@@ -12,7 +12,7 @@ import { addTimingB, computeTotalB, createRawDQMTimings, DQMTimingK, type DQMTim
 import { AlgebraToSparql, roughSizeOf } from "../utils.js";
 
 import { QueryResolver } from "./query-resolver.js";
-import { QueryTreeToSparql } from "../utils.js"
+import { queryTreeToSparql } from "../utils.js"
 
 import type { Bindings } from "@rdfjs/types";
 
@@ -28,11 +28,12 @@ export class DQMaterialization implements QueryResolver {
         addTimingB(timings, DQMTimingK.TRANSLATE_TO_TREE, start);
 
         start = performance.now();
-        const answer2 = this.mViews.find(({ query: materializedQuery2 }) =>
-            areEquivalent(materializedQuery2, query),
+        const answer2 = this.mViews.find(({ query: mQuery }) =>
+            areEquivalent(mQuery, query),
         )?.answer;
         addTimingB(timings, DQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW, start);
         if (answer2 !== undefined) {
+            //console.log("DQM FQ AVOIDED in bytes:", roughSizeOf(answer2));
             return [answer2.flat(), computeTotalB(timings)];
         }
 
@@ -50,12 +51,14 @@ export class DQMaterialization implements QueryResolver {
         addTimingB(timings, DQMTimingK.DECOMPOSE_TREE, start);
 
         start = performance.now();
-        const subqueries = subqueriesTrees.map(x => QueryTreeToSparql(x)); 
+        const subqueries = subqueriesTrees.map(x => queryTreeToSparql(x)); 
         addTimingB(timings, DQMTimingK.TRANSLATE_SQS_TO_REWRITE_TREES, start);
 
         if (subqueries.length === 1) {
             assert(subqueries[0] === AlgebraToSparql(query));
         }
+
+        const t = toSparql;
 
         let timeTakenTranslateSq = 0;
         let timeTakenToCheck = 0;
@@ -76,7 +79,7 @@ export class DQMaterialization implements QueryResolver {
 
                 sqStart = performance.now();
                 if (q !== undefined) {
-                    console.log("AVOIDED in bytes:", roughSizeOf(q.answer));
+                    //console.log("DQM SQ AVOIDED in bytes:", roughSizeOf(q.answer));
                     timeTakenAnswerSq += performance.now() - sqStart;
                     return Promise.resolve(q.answer);
                 } else {

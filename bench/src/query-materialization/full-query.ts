@@ -31,7 +31,7 @@ export class FQMaterialization implements QueryResolver {
 
         start = performance.now();
         if (answer !== undefined) {
-            console.log("AVOIDED in bytes:", roughSizeOf(answer));
+            //console.log("FQM AVOIDED in bytes:", roughSizeOf(answer));
             addTimingA(timings, FQMTimingK.COMPUTE_ANSWER_TO_QUERY, start);
         } else {
             answer = await executeQuery(queryS);

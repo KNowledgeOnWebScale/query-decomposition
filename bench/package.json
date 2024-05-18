@@ -6,7 +6,8 @@
     "main": "src/index.js",
     "scripts": {
         "start": "node --loader ts-node/esm src/index.ts",
-        "start:debug": "node --loader ts-node/esm --inspect-brk src/index.ts"
+        "start:debug": "node --loader ts-node/esm --inspect-brk src/index.ts",
+        "gen-table": "node --loader ts-node/esm bin/gen-table.ts"
     },
     "dependencies": {
         "@comunica/query-sparql": "=2.10.2",
