@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 
 import { hashObject, hashObjectOrUndefined } from "move-sparql-unions-to-top/src/utils.js";
-import { areOrderedEqual, areUnorderedEqual } from "move-sparql-unions-to-top/tests/utils/index.js"
+import { areOrderedEqual, areUnorderedEqual } from "move-sparql-unions-to-top/tests/utils/index.js";
 import { Util as AlgebraUtil, Algebra } from "sparqlalgebrajs";
 
 export function areEquivalent(a: Algebra.Operation, b: Algebra.Operation): boolean {
@@ -10,15 +10,15 @@ export function areEquivalent(a: Algebra.Operation, b: Algebra.Operation): boole
     }
 
     const equiv_cb = EQUIVALENCE_CBS[a.type];
-    assert(equiv_cb !== undefined, `Unsupported Operation type: ${a.type}`)
+    assert(equiv_cb !== undefined, `Unsupported Operation type: ${a.type}`);
 
     // Control flow does not narrow discriminated union types to be the same yet
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     return equiv_cb(a as any, b as any);
 }
 
-type EquivalenceCb<T extends Algebra.Operation> = (a: T, b: T) => boolean
-const EQUIVALENCE_CBS: {[K in Algebra.types]?: EquivalenceCb<Extract<Algebra.Operation, { type: K }>>} = {
+type EquivalenceCb<T extends Algebra.Operation> = (a: T, b: T) => boolean;
+const EQUIVALENCE_CBS: { [K in Algebra.types]?: EquivalenceCb<Extract<Algebra.Operation, { type: K }>> } = {
     [Algebra.types.PROJECT]: (a, b) => {
         const aInScopeVariables = new Set(AlgebraUtil.inScopeVariables(a.input).map(hashObject));
         const aSelectedInScopeVariables = a.variables.map(hashObject).filter(x => aInScopeVariables.has(x));
@@ -29,8 +29,8 @@ const EQUIVALENCE_CBS: {[K in Algebra.types]?: EquivalenceCb<Extract<Algebra.Ope
         return (
             // Unbound variables do not affect equivalence
             areUnorderedEqual(aSelectedInScopeVariables, bSelectedInScopeVariables, (x, y) => x === y) &&
-                areEquivalent(a.input, b.input)
-        );    
+            areEquivalent(a.input, b.input)
+        );
     },
     [Algebra.types.UNION]: (a, b) => {
         return areUnorderedEqual(a.input, b.input, areEquivalent);

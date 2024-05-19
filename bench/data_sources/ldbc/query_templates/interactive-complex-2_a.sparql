@@ -1,0 +1,43 @@
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX sn: <http://www.ldbc.eu/ldbc_socialnet/1.0/data/>
+PREFIX snvoc: <http://www.ldbc.eu/ldbc_socialnet/1.0/vocabulary/>
+PREFIX sntag: <http://www.ldbc.eu/ldbc_socialnet/1.0/tag/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX dbpedia: <http://dbpedia.org/resource/>
+PREFIX dbpedia-owl: <http://dbpedia.org/ontology/>
+
+SELECT
+  ?frId
+  ?first
+  ?last
+  ?messageId
+  ?content
+  ?creationDate
+WHERE
+{
+    {
+        SELECT ?fr WHERE {
+            ?rootPerson a snvoc:Person .
+            ?fr a snvoc:Person .
+            ?rootPerson snvoc:id $personId .
+            ?rootPerson snvoc:knows/snvoc:hasPerson ?fr
+        }
+    }
+    ?message snvoc:hasCreator ?fr .
+    ?message a snvoc:Post
+    {
+        {
+            ?message snvoc:content ?content
+        } UNION {
+            ?message snvoc:imageFile ?content
+        }
+    } .
+    ?message snvoc:creationDate ?creationDate .
+    ?message snvoc:id ?messageId .
+    FILTER (?creationDate <= $maxDate) .
+    ?fr snvoc:firstName ?first .
+    ?fr snvoc:lastName ?last .
+    ?fr snvoc:id ?frId .
+}

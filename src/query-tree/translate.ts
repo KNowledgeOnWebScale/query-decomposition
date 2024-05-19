@@ -6,7 +6,7 @@ import {
     translate as translateExternal,
 } from "sparqlalgebrajs";
 
-import { hasLengthAtLeast, type ArrayMinLength } from "../utils.js";
+import { hasLengthAtLeast } from "../utils.js";
 
 import * as Algebra from "./types.js";
 import { UnsupportedAlgebraElement } from "./unsupported-element-error.js";
@@ -29,7 +29,7 @@ export function _translate(op: AlgebraExternal.Operation): Algebra.Operand {
 
             return {
                 type: Algebra.types.UNION,
-                input: op.input.map(_translate) as ArrayMinLength<Algebra.Operation, 2>,
+                input: op.input.map(_translate),
             } satisfies Algebra.Union;
         }
         case AlgebraExternal.types.MINUS: {
@@ -43,14 +43,18 @@ export function _translate(op: AlgebraExternal.Operation): Algebra.Operand {
 
             return {
                 type: Algebra.types.JOIN,
-                input: op.input.map(_translate) as ArrayMinLength<Algebra.Operation, 2>,
+                input: op.input.map(_translate),
             } satisfies Algebra.Join;
         }
         case AlgebraExternal.types.LEFT_JOIN: {
-            return {
+            const ret: Algebra.LeftJoin = {
                 type: Algebra.types.LEFT_JOIN,
                 input: [_translate(op.input[0]), _translate(op.input[1])],
-            } satisfies Algebra.LeftJoin;
+            };
+            if (op.expression !== undefined) {
+                ret.expression = op.expression;
+            }
+            return ret;
         }
         case AlgebraExternal.types.FILTER: {
             return {
@@ -103,10 +107,14 @@ export function reverseTranslate(op: Algebra.Operand): AlgebraExternal.Operation
             } satisfies AlgebraExternal.Join;
         }
         case Algebra.types.LEFT_JOIN: {
-            return {
+            const ret: AlgebraExternal.LeftJoin = {
                 type: AlgebraExternal.types.LEFT_JOIN,
                 input: op.input.map(reverseTranslate),
-            } satisfies AlgebraExternal.LeftJoin;
+            };
+            if (op.expression !== undefined) {
+                ret.expression = op.expression as AlgebraExternal.Expression;
+            }
+            return ret;
         }
         case Algebra.types.FILTER: {
             return {

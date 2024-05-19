@@ -1,25 +1,28 @@
-import { strict as assert } from "node:assert";
+import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
 
-import { decomposeQueryTree } from "move-sparql-unions-to-top/src/index.js";
+import { BindingsFactory } from "@comunica/bindings-factory";
 import { QueryTree } from "move-sparql-unions-to-top/src/query-tree/index.js";
 import { moveUnionsToTop } from "move-sparql-unions-to-top/src/rewrite-unions/algorithm.js";
-import { Algebra, toSparql, translate } from "sparqlalgebrajs";
+import { Algebra, translate } from "sparqlalgebrajs";
 
 import { executeQuery } from "../execute-query.js";
 import { areEquivalent } from "../query-tree/equivalence.js";
-import { addTimingB, computeTotalB, createRawDQMTimings, DQMTimingK, type DQMTimings } from "../timings.js";
-import { AlgebraToSparql, roughSizeOf } from "../utils.js";
+import { addTimingB, computeTotal, createRawDQMTimings, DQMTimingK, type DQMTimings } from "../timings.js";
+import { algebraToSparql, roughSizeOf, queryTreeToSparql } from "../utils.js";
 
-import { QueryResolver } from "./query-resolver.js";
-import { queryTreeToSparql } from "../utils.js"
+import { decomposeQuery } from "./decompose-query.js";
 
 import type { Bindings } from "@rdfjs/types";
 
-export class DQMaterialization implements QueryResolver {
-    mViews: { query: Algebra.Project; answer: Awaited<ReturnType<typeof executeQuery>>[] }[] = [];
+const BF = new BindingsFactory();
 
-    async answerQuery(queryS: string): Promise<[Bindings[], DQMTimings]> {
+type MViews = { query: Algebra.Project; answer: Bindings[][] }[];
+
+export class DQMaterialization {
+    mViews: MViews = [];
+
+    async answerQuery(queryS: string, subqueryLimit: number): Promise<[Bindings[], DQMTimings]> {
         const timings = createRawDQMTimings();
 
         let start = performance.now();
@@ -28,80 +31,73 @@ export class DQMaterialization implements QueryResolver {
         addTimingB(timings, DQMTimingK.TRANSLATE_TO_TREE, start);
 
         start = performance.now();
-        const answer2 = this.mViews.find(({ query: mQuery }) =>
-            areEquivalent(mQuery, query),
-        )?.answer;
+        const answer2 = this.mViews.find(({ query: mQuery }) => areEquivalent(mQuery, query))?.answer;
         addTimingB(timings, DQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW, start);
         if (answer2 !== undefined) {
             //console.log("DQM FQ AVOIDED in bytes:", roughSizeOf(answer2));
-            return [answer2.flat(), computeTotalB(timings)];
+            return [answer2.flat(), computeTotal(timings)];
         }
 
         start = performance.now();
-        const query2 = QueryTree.translate(queryS);
-        assert(query2.type === QueryTree.types.PROJECT);
+
+        const t1 = algebraToSparql(query);
+        assert(t1 === algebraToSparql(query));
+
+        const queryRT = QueryTree.translate(queryS);
+        assert(queryRT.type === QueryTree.types.PROJECT);
         addTimingB(timings, DQMTimingK.TRANSLATE_TO_REWRITE_TREE, start);
 
         start = performance.now();
-        const rewrittenQuery = moveUnionsToTop(query2);
+        const rewrittenQueryS = moveUnionsToTop(queryRT);
         addTimingB(timings, DQMTimingK.REWRITE_TREE, start);
 
         start = performance.now();
-        const subqueriesTrees = decomposeQueryTree(rewrittenQuery);
-        addTimingB(timings, DQMTimingK.DECOMPOSE_TREE, start);
+        const rewrittenQuery = translate(queryTreeToSparql(rewrittenQueryS));
+        assert(rewrittenQuery.type === Algebra.types.PROJECT);
+        addTimingB(timings, DQMTimingK.TRANSLATE_FROM_REWRITE_TREE_TO_TREE, start);
 
         start = performance.now();
-        const subqueries = subqueriesTrees.map(x => queryTreeToSparql(x)); 
-        addTimingB(timings, DQMTimingK.TRANSLATE_SQS_TO_REWRITE_TREES, start);
+        const subqueries = decomposeQuery(rewrittenQuery);
+        addTimingB(timings, DQMTimingK.DECOMPOSE_TREE, start);
 
         if (subqueries.length === 1) {
-            assert(subqueries[0] === AlgebraToSparql(query));
+            assert(algebraToSparql(subqueries[0]!) === algebraToSparql(query));
         }
 
-        const t = toSparql;
-
-        let timeTakenTranslateSq = 0;
         let timeTakenToCheck = 0;
-        let timeTakenAnswerSq = 0;
         let timeTakenMaterializeSq = 0;
         const subqueriesAnswers = await Promise.all(
             subqueries.map(async subquery => {
                 let sqStart = performance.now();
-                const subqueryTree = translate(subquery);
-                assert(subqueryTree.type === Algebra.types.PROJECT);
-                timeTakenTranslateSq += performance.now() - sqStart;
-
-                sqStart = performance.now();
                 const q = this.mViews.find(({ query: materializedQuery }) =>
-                    areEquivalent(materializedQuery, subqueryTree),
+                    areEquivalent(materializedQuery, subquery),
                 );
-                timeTakenToCheck += performance.now() - sqStart;
 
-                sqStart = performance.now();
+                //sqStart = performance.now();
                 if (q !== undefined) {
+                    timeTakenToCheck += performance.now() - sqStart;
                     //console.log("DQM SQ AVOIDED in bytes:", roughSizeOf(q.answer));
-                    timeTakenAnswerSq += performance.now() - sqStart;
                     return Promise.resolve(q.answer);
                 } else {
-                    const subqueryAnswer = await executeQuery(subquery).then(x => [x]);
-                    timeTakenAnswerSq += performance.now() - sqStart;
+                    timeTakenToCheck += performance.now() - sqStart;
+
                     sqStart = performance.now();
-                    this.mViews.push({ query: subqueryTree, answer: subqueryAnswer });
-                    timeTakenMaterializeSq += performance.now() - sqStart;
-                    return subqueryAnswer;
+                    const subqueryS = algebraToSparql(subquery);
+                    const t = performance.now() - sqStart;
+                    const [subqueryAnswer, subqueryExecTime] = await executeQuery(
+                        subqueryS + `\nLIMIT ${subqueryLimit}`,
+                    );
+                    this.mViews.push({ query: subquery, answer: [subqueryAnswer] });
+                    timeTakenMaterializeSq += t + subqueryExecTime;
+                    return [subqueryAnswer];
                 }
             }),
         );
-        timings[DQMTimingK.TRANSLATE_SQS_TO_TREE] = { ms: timeTakenTranslateSq, isSummary: false };
-        timings[DQMTimingK.CHECK_EXISTING_MATERIALIZED_SQ_VIEW] = { ms: timeTakenTranslateSq, isSummary: false };
-        timings[DQMTimingK.ANSWER_SQS] = { ms: timeTakenAnswerSq, isSummary: false };
-        timings[DQMTimingK.MATERIALIZE_SQS] = { ms: timeTakenMaterializeSq, isSummary: false };
-        timings[DQMTimingK.MATERIALIZE_AND_ANSWER_SQS] = {
-            ms: timeTakenTranslateSq + timeTakenToCheck + timeTakenAnswerSq,
-            isSummary: true,
-        };
+        timings[DQMTimingK.CHECK_EXISTING_MATERIALIZED_SQ_VIEW] = { ms: timeTakenToCheck };
+        timings[DQMTimingK.MATERIALIZE_SQS] = { ms: timeTakenMaterializeSq };
 
         start = performance.now();
+        // If there is only a single subquery than it is equal to the query
         if (subqueries.length > 1) {
             this.mViews.push({
                 query: query,
@@ -111,24 +107,38 @@ export class DQMaterialization implements QueryResolver {
         addTimingB(timings, DQMTimingK.MATERIALIZE_QUERY, start);
 
         start = performance.now();
-        const answer = subqueriesAnswers.flat(2);
+        const answer = this.mViews.at(-1)!.answer.flat();
         addTimingB(timings, DQMTimingK.ANSWER_QUERY_FROM_SQS, start);
 
-        return [answer, computeTotalB(timings)];
+        return [answer, computeTotal(timings)];
     }
 
-    roughSizeOfMaterializedViews(): { queries: number; answers: number } {
-        const ret = { queries: 0, answers: 0 };
+    roughSizeOfMaterializedViews(): { queryTrees: number; answers: number } {
+        const ret = { queryTrees: 0, answers: 0 };
 
-        const serializedQueries = new Set(this.mViews.map(x => x.query));
-        for (const v of serializedQueries.values()) {
-            ret.queries += roughSizeOf(v);
-        }
+        ret.queryTrees += this.mViews
+            .map(x => x.query)
+            .map(queryTree => roughSizeOf(queryTree))
+            .reduce((acc, e) => acc + e, 0);
 
-        const serializedAnswers = new Set(this.mViews.flatMap(x => x.answer));
-        for (const v of serializedAnswers) {
+        // Set of materialized views referred to by the virtual views
+        const mViews = new Set(this.mViews.flatMap(x => x.answer));
+        for (const v of mViews) {
             ret.answers += roughSizeOf(v);
         }
+        // Virtual views
+        ret.answers += this.mViews.map(x => x.answer.length).reduce((acc, e) => acc + e, 0) * 8;
+
         return ret;
+    }
+
+    static cloneMViews(mViews: MViews): MViews {
+        return mViews.map(({ query, answer }) => {
+            const queryC = structuredClone(query);
+            const answerC = answer.map(x => {
+                return x.map(y => BF.fromBindings(y));
+            });
+            return { query: queryC, answer: answerC };
+        });
     }
 }

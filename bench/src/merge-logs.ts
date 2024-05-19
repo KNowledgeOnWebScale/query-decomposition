@@ -1,85 +1,95 @@
-import type { Log } from "./index.js";
-import { DQMTimingK, FQMTimingK, TotalTimingK } from "./timings.js";
 import { calcAvg, calcAvgO, calcAvgON, calcStdDev, calcStdDevO, calcStdDevON } from "./stats.js";
+import { DQMTimingK, FQMTimingK, TotalTimingK, type DQMTimings, type FQMTimings } from "./timings.js";
 
-export function mergeLogs(logs: Log[]) {
+import type { Log } from "./index.js";
+
+export function mergeLogs(logs: Log[]): { avgs: Log; stdDevs: Log } {
+    const timings4: Partial<FQMTimings> = {};
+    for (const t of Object.values(FQMTimingK)) {
+        timings4[t] = calcAvgON(logs.map(x => x.fQMaterialization.timings[t]));
+    }
+    timings4[TotalTimingK.TOTAL] = calcAvg(logs.map(x => x.fQMaterialization.timings[TotalTimingK.TOTAL]));
+
+    const timings5: Partial<DQMTimings> = {};
+    for (const t of Object.values(DQMTimingK)) {
+        timings5[t] = calcAvgON(logs.map(x => x.dQMaterialization.timings[t]));
+    }
+    timings5[TotalTimingK.TOTAL] = calcAvg(logs.map(x => x.dQMaterialization.timings[TotalTimingK.TOTAL]));
+
     const avgs: Log = {
         fQMaterialization: {
-            timings: {
-                [FQMTimingK.TRANSLATE_TO_TREE]: calcAvgON(logs.map(x => x.fQMaterialization.timings[FQMTimingK.TRANSLATE_TO_TREE])),
-                [FQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW]: calcAvgON(logs.map(x => x.fQMaterialization.timings[FQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW])),
-                [FQMTimingK.COMPUTE_ANSWER_TO_QUERY]: calcAvgON(logs.map(x => x.fQMaterialization.timings[FQMTimingK.COMPUTE_ANSWER_TO_QUERY])),
-                [FQMTimingK.MATERIALIZE_ANSWER_TO_QUERY]: calcAvgON(logs.map(x => x.fQMaterialization.timings[FQMTimingK.MATERIALIZE_ANSWER_TO_QUERY])),
-                [TotalTimingK.TOTAL]: calcAvg(logs.map(x => x.fQMaterialization.timings[TotalTimingK.TOTAL])),
-            },
+            timings: timings4 as FQMTimings,
             mViewSize: {
                 queries: calcAvgO(logs.map(x => x.fQMaterialization.mViewSize.queries)),
                 answers: calcAvgO(logs.map(x => x.fQMaterialization.mViewSize.answers)),
-            }
+            },
         },
         dQMaterialization: {
-            timings: {
-                [DQMTimingK.TRANSLATE_TO_TREE]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.TRANSLATE_TO_TREE])),
-                [DQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW])),
-                [DQMTimingK.TRANSLATE_TO_REWRITE_TREE]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.TRANSLATE_TO_REWRITE_TREE])),
-                [DQMTimingK.REWRITE_TREE]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.REWRITE_TREE])),
-                [DQMTimingK.DECOMPOSE_TREE]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.DECOMPOSE_TREE])),
-                [DQMTimingK.TRANSLATE_SQS_TO_REWRITE_TREES]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.TRANSLATE_SQS_TO_REWRITE_TREES])),
-                [DQMTimingK.TRANSLATE_SQS_TO_TREE]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.TRANSLATE_SQS_TO_TREE])),
-                [DQMTimingK.CHECK_EXISTING_MATERIALIZED_SQ_VIEW]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.CHECK_EXISTING_MATERIALIZED_SQ_VIEW])),
-                [DQMTimingK.ANSWER_SQS]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.ANSWER_SQS])),
-                [DQMTimingK.MATERIALIZE_SQS]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.MATERIALIZE_SQS])),
-                [DQMTimingK.MATERIALIZE_AND_ANSWER_SQS]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.MATERIALIZE_AND_ANSWER_SQS])),
-                [DQMTimingK.MATERIALIZE_QUERY]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.MATERIALIZE_QUERY])),
-                [DQMTimingK.ANSWER_QUERY_FROM_SQS]: calcAvgON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.ANSWER_QUERY_FROM_SQS])),
-                [TotalTimingK.TOTAL]: calcAvg(logs.map(x => x.dQMaterialization.timings[TotalTimingK.TOTAL])),
-            },
+            timings: timings5 as DQMTimings,
             mViewSize: {
                 queries: calcAvgO(logs.map(x => x.dQMaterialization.mViewSize.queries)),
                 answers: calcAvgO(logs.map(x => x.dQMaterialization.mViewSize.answers)),
-            }
+            },
         },
-        dQMtoFQMViewSizePct: calcAvgO(logs.map(x => x.dQMtoFQMViewSizePct))
+        dQMtoFQMViewSizePct: calcAvgO(logs.map(x => x.dQMtoFQMViewSizePct)),
+    };
+
+    const timings2: Partial<FQMTimings> = {};
+    for (const t of Object.values(FQMTimingK)) {
+        timings2[t] = calcStdDevON(
+            logs.map(x => x.fQMaterialization.timings[t]),
+            avgs.fQMaterialization.timings[t],
+        );
     }
+    timings2[TotalTimingK.TOTAL] = calcStdDev(
+        logs.map(x => x.fQMaterialization.timings[TotalTimingK.TOTAL]),
+        avgs.fQMaterialization.timings[TotalTimingK.TOTAL],
+    );
+
+    const timings3: Partial<DQMTimings> = {};
+    for (const t of Object.values(DQMTimingK)) {
+        timings3[t] = calcStdDevON(
+            logs.map(x => x.dQMaterialization.timings[t]),
+            avgs.dQMaterialization.timings[t],
+        );
+    }
+    timings3[TotalTimingK.TOTAL] = calcStdDev(
+        logs.map(x => x.dQMaterialization.timings[TotalTimingK.TOTAL]),
+        avgs.dQMaterialization.timings[TotalTimingK.TOTAL],
+    );
 
     const stdDevs: Log = {
         fQMaterialization: {
-            timings: {
-                [FQMTimingK.TRANSLATE_TO_TREE]: calcStdDevON(logs.map(x => x.fQMaterialization.timings[FQMTimingK.TRANSLATE_TO_TREE]), avgs.fQMaterialization.timings[FQMTimingK.TRANSLATE_TO_TREE]),
-                [FQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW]: calcStdDevON(logs.map(x => x.fQMaterialization.timings[FQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW]), avgs.fQMaterialization.timings[FQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW]),
-                [FQMTimingK.COMPUTE_ANSWER_TO_QUERY]: calcStdDevON(logs.map(x => x.fQMaterialization.timings[FQMTimingK.COMPUTE_ANSWER_TO_QUERY]), avgs.fQMaterialization.timings[FQMTimingK.COMPUTE_ANSWER_TO_QUERY]),
-                [FQMTimingK.MATERIALIZE_ANSWER_TO_QUERY]: calcStdDevON(logs.map(x => x.fQMaterialization.timings[FQMTimingK.MATERIALIZE_ANSWER_TO_QUERY]), avgs.fQMaterialization.timings[FQMTimingK.MATERIALIZE_ANSWER_TO_QUERY]),
-                [TotalTimingK.TOTAL]: calcStdDev(logs.map(x => x.fQMaterialization.timings[TotalTimingK.TOTAL]), avgs.fQMaterialization.timings[TotalTimingK.TOTAL]),
-            },
+            timings: timings2 as FQMTimings,
             mViewSize: {
-                queries: calcStdDevO(logs.map(x => x.fQMaterialization.mViewSize.queries), avgs.fQMaterialization.mViewSize.queries),
-                answers: calcStdDevO(logs.map(x => x.fQMaterialization.mViewSize.answers), avgs.fQMaterialization.mViewSize.answers),
-            }
+                queries: calcStdDevO(
+                    logs.map(x => x.fQMaterialization.mViewSize.queries),
+                    avgs.fQMaterialization.mViewSize.queries,
+                ),
+                answers: calcStdDevO(
+                    logs.map(x => x.fQMaterialization.mViewSize.answers),
+                    avgs.fQMaterialization.mViewSize.answers,
+                ),
+            },
         },
         dQMaterialization: {
-            timings: {
-                [DQMTimingK.TRANSLATE_TO_TREE]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.TRANSLATE_TO_TREE]), avgs.dQMaterialization.timings[DQMTimingK.TRANSLATE_TO_TREE]),
-                [DQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW]), avgs.dQMaterialization.timings[DQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW]),
-                [DQMTimingK.TRANSLATE_TO_REWRITE_TREE]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.TRANSLATE_TO_REWRITE_TREE]), avgs.dQMaterialization.timings[DQMTimingK.TRANSLATE_TO_REWRITE_TREE]),
-                [DQMTimingK.REWRITE_TREE]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.REWRITE_TREE]), avgs.dQMaterialization.timings[DQMTimingK.REWRITE_TREE]),
-                [DQMTimingK.DECOMPOSE_TREE]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.DECOMPOSE_TREE]), avgs.dQMaterialization.timings[DQMTimingK.DECOMPOSE_TREE]),
-                [DQMTimingK.TRANSLATE_SQS_TO_REWRITE_TREES]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.TRANSLATE_SQS_TO_REWRITE_TREES]), avgs.dQMaterialization.timings[DQMTimingK.TRANSLATE_SQS_TO_REWRITE_TREES]),
-                [DQMTimingK.TRANSLATE_SQS_TO_TREE]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.TRANSLATE_SQS_TO_TREE]), avgs.dQMaterialization.timings[DQMTimingK.TRANSLATE_SQS_TO_TREE]),
-                [DQMTimingK.CHECK_EXISTING_MATERIALIZED_SQ_VIEW]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.CHECK_EXISTING_MATERIALIZED_SQ_VIEW]), avgs.dQMaterialization.timings[DQMTimingK.CHECK_EXISTING_MATERIALIZED_SQ_VIEW]),
-                [DQMTimingK.ANSWER_SQS]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.ANSWER_SQS]), avgs.dQMaterialization.timings[DQMTimingK.ANSWER_SQS]),
-                [DQMTimingK.MATERIALIZE_SQS]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.MATERIALIZE_SQS]), avgs.dQMaterialization.timings[DQMTimingK.MATERIALIZE_SQS]),
-                [DQMTimingK.MATERIALIZE_AND_ANSWER_SQS]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.MATERIALIZE_AND_ANSWER_SQS]), avgs.dQMaterialization.timings[DQMTimingK.MATERIALIZE_AND_ANSWER_SQS]),
-                [DQMTimingK.MATERIALIZE_QUERY]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.MATERIALIZE_QUERY]), avgs.dQMaterialization.timings[DQMTimingK.MATERIALIZE_QUERY]),
-                [DQMTimingK.ANSWER_QUERY_FROM_SQS]: calcStdDevON(logs.map(x => x.dQMaterialization.timings[DQMTimingK.ANSWER_QUERY_FROM_SQS]), avgs.dQMaterialization.timings[DQMTimingK.ANSWER_QUERY_FROM_SQS]),
-                [TotalTimingK.TOTAL]: calcStdDev(logs.map(x => x.dQMaterialization.timings[TotalTimingK.TOTAL]), avgs.dQMaterialization.timings[TotalTimingK.TOTAL]),
-            },
+            timings: timings3 as DQMTimings,
             mViewSize: {
-                queries: calcStdDevO(logs.map(x => x.dQMaterialization.mViewSize.queries), avgs.dQMaterialization.mViewSize.queries),
-                answers: calcStdDevO(logs.map(x => x.dQMaterialization.mViewSize.answers), avgs.dQMaterialization.mViewSize.answers),
-            }
+                queries: calcStdDevO(
+                    logs.map(x => x.dQMaterialization.mViewSize.queries),
+                    avgs.dQMaterialization.mViewSize.queries,
+                ),
+                answers: calcStdDevO(
+                    logs.map(x => x.dQMaterialization.mViewSize.answers),
+                    avgs.dQMaterialization.mViewSize.answers,
+                ),
+            },
         },
-        dQMtoFQMViewSizePct: calcStdDevO(logs.map(x => x.dQMtoFQMViewSizePct), avgs.dQMtoFQMViewSizePct)
-    }
+        dQMtoFQMViewSizePct: calcStdDevO(
+            logs.map(x => x.dQMtoFQMViewSizePct),
+            avgs.dQMtoFQMViewSizePct,
+        ),
+    };
 
-    return {avgs, stdDevs}
+    return { avgs, stdDevs };
 }

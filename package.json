@@ -4,7 +4,7 @@
     "version": "0.1.0",
     "type": "module",
     "scripts": {
-        "build": "tsc && resolve-tspaths",
+        "build": "tsc --noEmit false && resolve-tspaths",
         "tests": "jest",
         "tests:debug": "DEBUG=move-sparql-unions-to-top:* node --inspect-brk node_modules/.bin/jest --runInBand",
         "prepare": "husky install"

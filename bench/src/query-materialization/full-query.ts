@@ -1,21 +1,24 @@
-import { strict as assert } from "node:assert";
+import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
 
+import { BindingsFactory } from "@comunica/bindings-factory";
 import { Algebra, translate } from "sparqlalgebrajs";
 
 import { executeQuery } from "../execute-query.js";
 import { areEquivalent } from "../query-tree/equivalence.js";
-import { addTimingA, computeTotalA, createRawFQMTimings, FQMTimingK, type FQMTimings } from "../timings.js";
+import { addTimingA, computeTotal, createRawFQMTimings, FQMTimingK, type FQMTimings } from "../timings.js";
 import { roughSizeOf } from "../utils.js";
-
-import { QueryResolver } from "./query-resolver.js";
 
 import type { Bindings } from "@rdfjs/types";
 
-export class FQMaterialization implements QueryResolver {
-    mViews: { query: Algebra.Project; answer: Awaited<ReturnType<typeof executeQuery>> }[] = [];
+const BF = new BindingsFactory();
 
-    async answerQuery(queryS: string): Promise<[Bindings[], FQMTimings]> {
+type MViews = { query: Algebra.Project; answer: Bindings[] }[];
+
+export class FQMaterialization {
+    mViews: MViews = [];
+
+    async answerQuery(queryS: string, queryLimit: number): Promise<[Bindings[], FQMTimings]> {
         const timings = createRawFQMTimings();
 
         let start = performance.now();
@@ -32,30 +35,38 @@ export class FQMaterialization implements QueryResolver {
         start = performance.now();
         if (answer !== undefined) {
             //console.log("FQM AVOIDED in bytes:", roughSizeOf(answer));
-            addTimingA(timings, FQMTimingK.COMPUTE_ANSWER_TO_QUERY, start);
         } else {
-            answer = await executeQuery(queryS);
-            addTimingA(timings, FQMTimingK.COMPUTE_ANSWER_TO_QUERY, start);
-            start = performance.now()
+            const t = performance.now() - start;
+            let queryExecTime: number;
+            [answer, queryExecTime] = await executeQuery(queryS + `\nLIMIT ${queryLimit}`);
+            start = performance.now();
             this.mViews.push({ query, answer });
-            addTimingA(timings, FQMTimingK.MATERIALIZE_ANSWER_TO_QUERY, start);
+            timings[FQMTimingK.MATERIALIZE_QUERY] = { ms: performance.now() - start + t + queryExecTime };
         }
 
-        return [answer, computeTotalA(timings)];
+        return [answer, computeTotal(timings)];
     }
 
-    roughSizeOfMaterializedViews(): { queries: number; answers: number } {
-        const ret = { queries: 0, answers: 0 };
+    roughSizeOfMaterializedViews(): { queryTrees: number; answers: number } {
+        const ret = { queryTrees: 0, answers: 0 };
 
-        const serializedQueries = new Set(this.mViews.map(x => x.query));
-        for (const v of serializedQueries.values()) {
-            ret.queries += roughSizeOf(v);
-        }
+        ret.queryTrees += this.mViews
+            .map(x => x.query)
+            .map(queryTree => roughSizeOf(queryTree))
+            .reduce((acc, e) => acc + e, 0);
 
-        const serializedAnswers = new Set(this.mViews.map(x => x.answer));
-        for (const v of serializedAnswers.values()) {
+        const mViews = new Set(this.mViews.map(x => x.answer));
+        for (const v of mViews) {
             ret.answers += roughSizeOf(v);
         }
         return ret;
+    }
+
+    static cloneMViews(mViews: MViews): MViews {
+        return mViews.map(({ query, answer }) => {
+            const queryC = structuredClone(query);
+            const answerC = answer.map(y => BF.fromBindings(y));
+            return { query: queryC, answer: answerC };
+        });
     }
 }

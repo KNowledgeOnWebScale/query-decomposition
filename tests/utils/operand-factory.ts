@@ -86,10 +86,15 @@ export class OperandFactory {
         };
     }
 
-    static createLeftJoin(...input: QueryTree.LeftJoin["input"]): QueryTree.LeftJoin {
+    static createLeftJoin(
+        a: QueryTree.LeftJoin["input"][0],
+        b: QueryTree.LeftJoin["input"][1],
+        expression?: QueryTree.LeftJoin["expression"],
+    ): QueryTree.LeftJoin {
         return {
             type: QueryTree.types.LEFT_JOIN,
-            input,
+            input: [a, b],
+            expression,
         };
     }
 

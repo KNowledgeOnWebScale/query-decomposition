@@ -5,13 +5,11 @@ import { describe, expect, it, test } from "@jest/globals";
 import { OperandFactory, OperandFactory as F } from "@tests/utils/operand-factory.js";
 import { expectQueryEquivalence } from "@tests/utils/query-tree/expect.js";
 
-import { translate } from "./translate.js";
-
 import { QueryTree } from "./index.js";
 
 it("Does not support solution modifiers", () =>
     expect(() =>
-        translate(
+        QueryTree.translate(
             `
             PREFIX : <http://example.com/ns#>
 
@@ -32,15 +30,19 @@ describe("Everything query", () => {
             {
                 { { {${A.s}} UNION {${B.s}} } MINUS {${C.s}} }
                 { ${D.s} }
-            } OPTIONAL { ${E.s} }
+            } OPTIONAL { ${E.s} FILTER(?s) }
             FILTER (?s)
         }`;
-    const input = translate(inputS);
+    const input = QueryTree.translate(inputS);
     assert(input.type === QueryTree.types.PROJECT);
 
     const expected = F.createProject(
         F.createFilter(
-            F.createLeftJoin(F.createJoin(F.createMinus(F.createUnion(A.v, B.v), C.v), D.v), E.v),
+            F.createLeftJoin(
+                F.createJoin(F.createMinus(F.createUnion(A.v, B.v), C.v), D.v),
+                E.v,
+                f.createExpression("?s"),
+            ),
             f.createExpression("?s"),
         ),
     );
