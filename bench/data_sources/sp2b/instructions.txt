@@ -1,0 +1,5 @@
+source: https://dbis.informatik.uni-freiburg.de/content/projects/SP2B/docs/sp2b-v1_01-full.tar.gz
+homepage: https://dbis.informatik.uni-freiburg.de/forschung/projekte/SP2B/
+
+dataset generate: ./sp2b_gen dataset.n3
+docker run --name virtdb_sp2b --env DBA_PASSWORD=1234 --publish 1111:1111 --publish  8890:8890 --volume `pwd`/db:/database openlink/virtuoso-opensource-7@sha256:e07868a3db9090400332eaa8ee694b8cf9bf7eebc26db6bbdc3bb92fd30ed010

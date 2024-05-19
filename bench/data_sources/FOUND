@@ -1,0 +1,26 @@
+In order from https://www.w3.org/wiki/RdfStoreBenchmarking:
+RELEVANT
+1. Berlin SPARQL Benchmark (BSBM) WIP
+2. https://dbis.informatik.uni-freiburg.de/forschung/projekte/SP2B/ WIP
+
+MAYBE BUT OUT OF SCOPE....
+- DBpedia SPARQL Benchmark: cannot find dataset nor queries https://sourceforge.net/projects/akswbenchmark/, does include unions but seems like a lot work
+
+
+
+
+
+1.  A Benchmark for Spatial Semantic Web Systems: not publcily available source
+2.  Linked Open Data Quality Assessment (LODQA): http://lodqa.wbsg.de/, doesn't do SPARQL queries, files for the benchmark: http://lodqa.wbsg.de/data/ no longer available
+3.  Link bench: not relevant to SPARQL (i.e. does not use nor provide SPARQL queries) https://github.com/facebookarchive/linkbench:
+4.  Waterloo SPARQL Diversity Test Suite (WatDiv): https://github.com/dsg-uwaterloo/watdiv uses no unions in there SPARQL test queries
+5.  Feasilble: ....
+6.  
+
+
+
+
+
+
+
+   \code{UNION} pattern: \hrefWFn{https://swat.cse.lehigh.edu/projects/lubm/queries-sparql.txt}{Lehigh University Benchmark (LUBM)}, \hrefWFn{https://www.openlinksw.com/scripts/sql/virtuoso/thalia_sparql_test_queries.sql}{THALIA Testbed}, Waterloo SPARQL Diversity Test Suite

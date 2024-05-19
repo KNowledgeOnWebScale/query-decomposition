@@ -1,0 +1,1 @@
+https://github.com/ldbc/ldbc_snb_interactive_v1_impls/tree/c19be0e793680497de4e88d360a20708cfcf43a9/sparql/queries

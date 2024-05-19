@@ -1,0 +1,4 @@
+personId|startDate|durationDays|countryXName|countryYName
+26388279067108|1325376000000|28|Oman|Dominican_Republic
+4398046511592|1304208000000|29|Chad|Dominican_Republic
+32985348834605|1304208000000|33|Norway|Dominican_Republic
