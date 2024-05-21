@@ -3,7 +3,14 @@ declare interface ReadonlyArray<T> {
     includes(arg: unknown, fromIndex?: number): arg is T;
 }
 
+/**
+ * Make sure T is at least assignable to U
+ */
+type Cast<T, U> = T extends U ? T : U;
+
 declare interface Array<T> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    map<U>(callbackfn: (value: T, index: number, array: T[]) => U, thisArg?: any): { [K in keyof this]: U };
+    map<U, This = undefined>(
+        callbackfn: (this: This, value: T, index: number, array: this) => U,
+        thisArg?: This,
+    ): Cast<{ [P in keyof this]: U }, U[]>;
 }

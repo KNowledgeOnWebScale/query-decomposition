@@ -4,70 +4,17 @@ import * as path from "node:path";
 
 import { areUnorderedEqual } from "move-sparql-unions-to-top/tests/utils/index.js";
 
-import { mergeLogs } from "./merge-logs.js";
+import { isCompleteLog, mergeLogs, type Log, type LogRaw, type QueriesLog, type ScenariosLog } from "./log.js";
 import { DQMaterialization } from "./query-materialization/decomposed-query.js";
 import { FQMaterialization } from "./query-materialization/full-query.js";
 import { getQueryLimit as getQueryLimits } from "./query-materialization/query-limit.js";
 import { getQueryStringScenarios as createQueryStringScenarios } from "./query-strings/create-query-scenarios.js";
 import { getQueryStrings, getQueryStringsFromTemplates } from "./query-strings/get-query-strings.js";
-import { type DQMTimings, type FQMTimings } from "./timings.js";
 import { PROJECT_DIR } from "./utils.js";
 
 import type { Bindings } from "@rdfjs/types";
 
-interface mViewSizeLog {
-    queries: { bytes: number; pct: number };
-    answers: { bytes: number; pct: number };
-}
-
-interface LogRaw {
-    fQMaterialization: { timings?: FQMTimings; mViewSize?: mViewSizeLog };
-    dQMaterialization: { timings?: DQMTimings; mViewSize?: mViewSizeLog };
-    dQMtoFQMViewSizePct?: { queries: number; answers: number; total: number };
-}
-
-export interface Log {
-    fQMaterialization: { timings: FQMTimings; mViewSize: mViewSizeLog };
-    dQMaterialization: { timings: DQMTimings; mViewSize: mViewSizeLog };
-    dQMtoFQMViewSizePct: { queries: number; answers: number; total: number };
-}
-
-export interface ScenariosLog {
-    fq: Log[];
-    cfq: Log[];
-    changeOne: Log[];
-    onlyOne: Log[];
-}
-
-export interface G {
-    fq: Log;
-    cfq: Log;
-    changeOne: Log;
-    onlyOne: Log;
-}
-
-export type GLog = Record<string, { avgs: G; stdDevs: G }>;
-
 export type BenchmarkName = "bsdm" | "ldbc" | "sp2b";
-
-async function getQueryStringsForBench(benchName: BenchmarkName): Promise<{ name: string; queries: string[] }[]> {
-    const isTemplated: { [key in BenchmarkName]: boolean } = {
-        bsdm: true,
-        ldbc: true,
-        sp2b: false,
-    };
-
-    if (isTemplated[benchName]) {
-        return getQueryStringsFromTemplates(
-            path.join(PROJECT_DIR, "data_sources", benchName, "query_templates"),
-            path.join(PROJECT_DIR, "data_sources", benchName, "query_substitution_parameters"),
-        );
-    } else {
-        return (await getQueryStrings(path.join(PROJECT_DIR, "data_sources", benchName, "queries"))).map(x => {
-            return { name: x.name, queries: [x.value] };
-        });
-    }
-}
 
 await main();
 
@@ -81,15 +28,15 @@ async function main() {
     const fQMaterialization = new FQMaterialization();
     const dQMaterialization = new DQMaterialization();
 
-    const qLogs: GLog = {};
-    for (const { name: queryName, queries: queryInsts } of queryStrings) {
+    const qLogs: QueriesLog = {};
+    for (const [queryName, queryInsts] of queryStrings.entries()) {
         const logs: ScenariosLog[] = [];
         for (const queryS of queryInsts) {
-            const preWarmupFQMFullQueryState = FQMaterialization.cloneMViews(fQMaterialization.mViews);
-            const preWarmupDQMFullQueryState = DQMaterialization.cloneMViews(dQMaterialization.mViews);
+            const preWarmupFQMFullQueryState = FQMaterialization.cloneViews(fQMaterialization.mViews);
+            const preWarmupDQMFullQueryState = DQMaterialization.cloneViews(dQMaterialization.views);
             await runQueryScenarios(queryS, fQMaterialization, dQMaterialization, { stableCount: 1 }); // Warmup
             fQMaterialization.mViews = preWarmupFQMFullQueryState;
-            dQMaterialization.mViews = preWarmupDQMFullQueryState;
+            dQMaterialization.views = preWarmupDQMFullQueryState;
 
             console.log(String("==").repeat(40) + "WARMUP END" + String("==").repeat(40));
 
@@ -101,21 +48,22 @@ async function main() {
         }
         const mergedLog = {
             fq: mergeLogs(logs.flatMap(x => x.fq)),
-            cfq: mergeLogs(logs.flatMap(x => x.cfq)),
+            mfq: mergeLogs(logs.flatMap(x => x.mfq)),
             changeOne: mergeLogs(logs.flatMap(x => x.changeOne)),
             onlyOne: mergeLogs(logs.flatMap(x => x.onlyOne)),
         };
         console.log(JSON.stringify(mergedLog, null, 2));
+
         qLogs[queryName] = {
             avgs: {
                 fq: mergedLog.fq.avgs,
-                cfq: mergedLog.cfq.avgs,
+                mfq: mergedLog.mfq.avgs,
                 onlyOne: mergedLog.onlyOne.avgs,
                 changeOne: mergedLog.changeOne.avgs,
             },
             stdDevs: {
                 fq: mergedLog.fq.stdDevs,
-                cfq: mergedLog.cfq.stdDevs,
+                mfq: mergedLog.mfq.stdDevs,
                 onlyOne: mergedLog.onlyOne.stdDevs,
                 changeOne: mergedLog.changeOne.stdDevs,
             },
@@ -127,6 +75,39 @@ async function main() {
     await fs.writeFile(path.join(PROJECT_DIR, "results", `${BENCH_NAME}.json`), JSON.stringify(qLogs, null, 2));
 }
 
+async function getQueryStringsForBench(benchName: BenchmarkName): Promise<Map<string, string[]>> {
+    const isTemplated: { [key in BenchmarkName]: boolean } = {
+        bsdm: true,
+        ldbc: true,
+        sp2b: false,
+    };
+
+    let rawQueries: { name: string; queries: string[] }[];
+    if (isTemplated[benchName]) {
+        rawQueries = await getQueryStringsFromTemplates(
+            path.join(PROJECT_DIR, "data_sources", benchName, "query_templates"),
+            path.join(PROJECT_DIR, "data_sources", benchName, "query_substitution_parameters"),
+        );
+    } else {
+        rawQueries = (await getQueryStrings(path.join(PROJECT_DIR, "data_sources", benchName, "queries"))).map(x => {
+            return { name: x.name, queries: [x.value] };
+        });
+    }
+
+    // Queries with an `_[a-z]` prefix originate from the same query
+    const queries = new Map<string, string[]>();
+    for (const query of rawQueries) {
+        const name = query.name.replace(/_[a-z]$/, "");
+
+        if (queries.has(name)) {
+            queries.get(name)!.push(...query.queries);
+        } else {
+            queries.set(name, query.queries);
+        }
+    }
+    return queries;
+}
+
 async function runQueryScenarios(
     queryS: string,
     fQMaterialization: FQMaterialization,
@@ -135,7 +116,7 @@ async function runQueryScenarios(
 ): Promise<ScenariosLog> {
     const qLog = {
         fq: new Array<Log>(),
-        cfq: Array<Log>(),
+        mfq: Array<Log>(),
         changeOne: Array<Log>(),
         onlyOne: Array<Log>(),
     };
@@ -145,29 +126,29 @@ async function runQueryScenarios(
     let tLogs: Log[] = [];
     for (let i = 0; i < opts.stableCount; i++) {
         fQMaterialization.mViews = [];
-        dQMaterialization.mViews = [];
+        dQMaterialization.views = [];
         tLogs.push(await runQuery(queryS, fQMaterialization, dQMaterialization));
     }
     qLog.fq = tLogs;
     tLogs = [];
     console.log(String("--").repeat(80));
 
-    const fQMFullQueryState = FQMaterialization.cloneMViews(fQMaterialization.mViews);
-    const dQMFullQueryState = DQMaterialization.cloneMViews(dQMaterialization.mViews);
+    const fQMFullQueryState = FQMaterialization.cloneViews(fQMaterialization.mViews);
+    const dQMFullQueryState = DQMaterialization.cloneViews(dQMaterialization.views);
 
     for (let i = 0; i < opts.stableCount; i++) {
-        fQMaterialization.mViews = FQMaterialization.cloneMViews(fQMFullQueryState);
-        dQMaterialization.mViews = DQMaterialization.cloneMViews(dQMFullQueryState);
+        fQMaterialization.mViews = FQMaterialization.cloneViews(fQMFullQueryState);
+        dQMaterialization.views = DQMaterialization.cloneViews(dQMFullQueryState);
         tLogs.push(await runQuery(queryS, fQMaterialization, dQMaterialization));
     }
-    qLog.cfq = tLogs;
+    qLog.mfq = tLogs;
     tLogs = [];
     console.log(String("--").repeat(80));
 
     for (const changeOneQueryS of changeOneQuerySs) {
         for (let i = 0; i < opts.stableCount; i++) {
-            fQMaterialization.mViews = FQMaterialization.cloneMViews(fQMFullQueryState);
-            dQMaterialization.mViews = DQMaterialization.cloneMViews(dQMFullQueryState);
+            fQMaterialization.mViews = FQMaterialization.cloneViews(fQMFullQueryState);
+            dQMaterialization.views = DQMaterialization.cloneViews(dQMFullQueryState);
             tLogs.push(await runQuery(changeOneQueryS, fQMaterialization, dQMaterialization));
         }
     }
@@ -177,8 +158,8 @@ async function runQueryScenarios(
 
     for (const onlyOneQueryS of onlyOneQuerySs) {
         for (let i = 0; i < opts.stableCount; i++) {
-            fQMaterialization.mViews = FQMaterialization.cloneMViews(fQMFullQueryState);
-            dQMaterialization.mViews = DQMaterialization.cloneMViews(dQMFullQueryState);
+            fQMaterialization.mViews = FQMaterialization.cloneViews(fQMFullQueryState);
+            dQMaterialization.views = DQMaterialization.cloneViews(dQMFullQueryState);
             tLogs.push(await runQuery(onlyOneQueryS, fQMaterialization, dQMaterialization));
         }
     }
@@ -243,5 +224,7 @@ async function runQuery(
         );
     }
 
-    return log as Log;
+    assert(isCompleteLog(log));
+
+    return log;
 }

@@ -6,11 +6,10 @@ module.exports = {
         sourceType: "module",
     },
     plugins: [
+        "@typescript-eslint/eslint-plugin",
         "import",
         "jest",
-        "no-autofix",
         "unused-imports",
-        "@typescript-eslint/eslint-plugin",
     ],
     settings: {
         "import/resolver": {
