@@ -1,10 +1,10 @@
 import { expect } from "@jest/globals";
 import createDebug from "debug";
 
-import { PACKAGE_NAME } from "@src/constants.js";
 import { QueryTree } from "@src/query-tree/index.js";
 import { toSparql } from "@src/query-tree/translate.js";
 
+import { PACKAGE_NAME } from "./../constants.js";
 import { areEquivalent } from "./../query-tree/equivalence.js";
 
 const debug = createDebug(`${PACKAGE_NAME}:query-equivalence`);

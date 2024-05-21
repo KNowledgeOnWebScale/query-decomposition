@@ -1,25 +1,34 @@
 import { strict as assert } from "assert";
 
 import { QueryTree } from "./query-tree/index.js";
-import { moveUnionsToTop } from "./rewrite-unions/algorithm.js";
+import { rewriteUnionsToTop } from "./rewrite-unions/algorithm.js";
 
 import type { ArrayMinLength } from "./utils.js";
 
-export function maximallyDecomposeQuery(query: string): ArrayMinLength<string, 1> {
+export function maximallyDecomposeSelectQuery(query: string): ArrayMinLength<string, 1> {
     const root = QueryTree.translate(query);
     assert(root.type === QueryTree.types.PROJECT);
-    return maximallyDecomposeQueryTree(root).map(x => QueryTree.toSparql(x));
+    return maximallyDecomposeSelectQueryTree(root).map(x => QueryTree.toSparql(x));
 }
 
-export function maximallyDecomposeQueryTree(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
-    return maximallyDecomposeQueryTree_(structuredClone(root));
+export function maximallyDecomposeSelectQueryTree(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
+    return maximallyDecomposeSelectQueryTree_(structuredClone(root));
 }
 
-function maximallyDecomposeQueryTree_(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
-    return decomposeQueryTree(moveUnionsToTop(root));
+function maximallyDecomposeSelectQueryTree_(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
+    const qVariables = root.variables;
+    let rewrittenRoot = rewriteUnionsToTop(root);
+    if (rewrittenRoot.type !== QueryTree.types.PROJECT) {
+        rewrittenRoot = {
+            type: QueryTree.types.PROJECT,
+            variables: qVariables,
+            input: rewrittenRoot,
+        };
+    }
+    return decomposeSelectQueryTree(rewrittenRoot);
 }
 
-export function decomposeQueryTree(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
+export function decomposeSelectQueryTree(root: QueryTree.Project): ArrayMinLength<QueryTree.Project, 1> {
     if (root.input.type !== QueryTree.types.UNION) {
         return [root];
     }

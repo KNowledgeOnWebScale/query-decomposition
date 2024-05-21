@@ -1,4 +1,8 @@
+import * as RDF from "@rdfjs/types";
 import hash from "object-hash";
+import { Util as externalAlgebraUtil } from "sparqlalgebrajs";
+
+import { QueryTree } from "@src/query-tree/index.js";
 
 type BuildArrayMinLength<T, N extends number, Current extends T[]> = Current["length"] extends N
     ? [...Current, ...T[]]
@@ -33,4 +37,8 @@ export class SetC<T extends hash.NotUndefined> {
     has(value: T): boolean {
         return this.set.has(hashObject(value));
     }
+}
+
+export function inScopeVariables(op: QueryTree.Operand): RDF.Variable[] {
+    return externalAlgebraUtil.inScopeVariables(QueryTree.reverseTranslate(op));
 }
