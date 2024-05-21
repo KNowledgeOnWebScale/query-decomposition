@@ -1,7 +1,48 @@
 import { calcAvg, calcAvgO, calcAvgON, calcStdDev, calcStdDevO, calcStdDevON } from "./stats.js";
 import { DQMTimingK, FQMTimingK, TotalTimingK, type DQMTimings, type FQMTimings } from "./timings.js";
 
-import type { Log } from "./index.js";
+export type QueriesLog = Record<string, { avgs: MergedScenariosLog; stdDevs: MergedScenariosLog }>;
+
+export interface MergedScenariosLog {
+    fq: Log;
+    mfq: Log;
+    changeOne: Log;
+    onlyOne: Log;
+}
+
+export interface ScenariosLog {
+    fq: Log[];
+    mfq: Log[];
+    changeOne: Log[];
+    onlyOne: Log[];
+}
+
+interface mViewSizeLog {
+    queries: { bytes: number; pct: number };
+    answers: { bytes: number; pct: number };
+}
+
+export interface Log {
+    fQMaterialization: { timings: FQMTimings; mViewSize: mViewSizeLog };
+    dQMaterialization: { timings: DQMTimings; mViewSize: mViewSizeLog };
+    dQMtoFQMViewSizePct: { queries: number; answers: number; total: number };
+}
+
+export interface LogRaw {
+    fQMaterialization: { timings?: FQMTimings; mViewSize?: mViewSizeLog };
+    dQMaterialization: { timings?: DQMTimings; mViewSize?: mViewSizeLog };
+    dQMtoFQMViewSizePct?: { queries: number; answers: number; total: number };
+}
+
+export function isCompleteLog(log: LogRaw): log is Log {
+    return (
+        log.fQMaterialization.timings !== undefined &&
+        log.fQMaterialization.mViewSize !== undefined &&
+        log.dQMaterialization.timings !== undefined &&
+        log.dQMaterialization.mViewSize !== undefined &&
+        log.dQMtoFQMViewSizePct !== undefined
+    );
+}
 
 export function mergeLogs(logs: Log[]): { avgs: Log; stdDevs: Log } {
     const timings4: Partial<FQMTimings> = {};

@@ -13,14 +13,16 @@ import { algebraToSparql, roughSizeOf, queryTreeToSparql } from "../utils.js";
 
 import { decomposeQuery } from "./decompose-query.js";
 
+import type { MaterializedView } from "./types.js";
 import type { Bindings } from "@rdfjs/types";
 
 const BF = new BindingsFactory();
 
-type MViews = { query: Algebra.Project; answer: Bindings[][] }[];
+export type VirtualView = MaterializedView[];
+type Views = { query: Algebra.Project; answer: VirtualView }[];
 
 export class DQMaterialization {
-    mViews: MViews = [];
+    views: Views = [];
 
     async answerQuery(queryS: string, subqueryLimit: number): Promise<[Bindings[], DQMTimings]> {
         const timings = createRawDQMTimings();
@@ -31,7 +33,7 @@ export class DQMaterialization {
         addTimingB(timings, DQMTimingK.TRANSLATE_TO_TREE, start);
 
         start = performance.now();
-        const answer2 = this.mViews.find(({ query: mQuery }) => areEquivalent(mQuery, query))?.answer;
+        const answer2 = this.views.find(({ query: mQuery }) => areEquivalent(mQuery, query))?.answer;
         addTimingB(timings, DQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW, start);
         if (answer2 !== undefined) {
             //console.log("DQM FQ AVOIDED in bytes:", roughSizeOf(answer2));
@@ -69,9 +71,7 @@ export class DQMaterialization {
         const subqueriesAnswers = await Promise.all(
             subqueries.map(async subquery => {
                 let sqStart = performance.now();
-                const q = this.mViews.find(({ query: materializedQuery }) =>
-                    areEquivalent(materializedQuery, subquery),
-                );
+                const q = this.views.find(({ query: materializedQuery }) => areEquivalent(materializedQuery, subquery));
 
                 //sqStart = performance.now();
                 if (q !== undefined) {
@@ -87,7 +87,7 @@ export class DQMaterialization {
                     const [subqueryAnswer, subqueryExecTime] = await executeQuery(
                         subqueryS + `\nLIMIT ${subqueryLimit}`,
                     );
-                    this.mViews.push({ query: subquery, answer: [subqueryAnswer] });
+                    this.views.push({ query: subquery, answer: [subqueryAnswer] });
                     timeTakenMaterializeSq += t + subqueryExecTime;
                     return [subqueryAnswer];
                 }
@@ -99,7 +99,7 @@ export class DQMaterialization {
         start = performance.now();
         // If there is only a single subquery than it is equal to the query
         if (subqueries.length > 1) {
-            this.mViews.push({
+            this.views.push({
                 query: query,
                 answer: subqueriesAnswers.flat(),
             });
@@ -107,7 +107,7 @@ export class DQMaterialization {
         addTimingB(timings, DQMTimingK.MATERIALIZE_QUERY, start);
 
         start = performance.now();
-        const answer = this.mViews.at(-1)!.answer.flat();
+        const answer = this.views.at(-1)!.answer.flat();
         addTimingB(timings, DQMTimingK.ANSWER_QUERY_FROM_SQS, start);
 
         return [answer, computeTotal(timings)];
@@ -116,29 +116,33 @@ export class DQMaterialization {
     roughSizeOfMaterializedViews(): { queryTrees: number; answers: number } {
         const ret = { queryTrees: 0, answers: 0 };
 
-        ret.queryTrees += this.mViews
+        ret.queryTrees += this.views
             .map(x => x.query)
             .map(queryTree => roughSizeOf(queryTree))
             .reduce((acc, e) => acc + e, 0);
 
         // Set of materialized views referred to by the virtual views
-        const mViews = new Set(this.mViews.flatMap(x => x.answer));
+        const mViews = new Set(this.views.flatMap(x => x.answer));
         for (const v of mViews) {
             ret.answers += roughSizeOf(v);
         }
         // Virtual views
-        ret.answers += this.mViews.map(x => x.answer.length).reduce((acc, e) => acc + e, 0) * 8;
+        ret.answers += this.views.map(x => x.answer.length).reduce((acc, e) => acc + e, 0) * 8;
 
         return ret;
     }
 
-    static cloneMViews(mViews: MViews): MViews {
-        return mViews.map(({ query, answer }) => {
+    static cloneViews(views: Views): Views {
+        const oldToNewMView = new Map(
+            views.flatMap(v => v.answer).map(oldMView => [oldMView, oldMView.map(b => BF.fromBindings(b))]),
+        );
+
+        const ret = views.map(({ query, answer }) => {
             const queryC = structuredClone(query);
-            const answerC = answer.map(x => {
-                return x.map(y => BF.fromBindings(y));
-            });
+            const answerC = answer.map(oldMView => oldToNewMView.get(oldMView)!);
             return { query: queryC, answer: answerC };
         });
+        assert(roughSizeOf(views) === roughSizeOf(ret));
+        return ret;
     }
 }

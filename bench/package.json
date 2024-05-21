@@ -5,26 +5,30 @@
     "type": "module",
     "main": "src/index.js",
     "scripts": {
-        "start": "node --loader ts-node/esm src/index.ts",
-        "start:debug": "node --loader ts-node/esm --inspect-brk src/index.ts",
+        "start": "node --loader ts-node/esm --enable-source-maps src/index.ts",
+        "start:debug": "node --loader ts-node/esm --enable-source-maps --inspect-brk src/index.ts",
         "build": "tsc --noEmit false && sed 's|export const PROJECT_DIR = path.dirname(path.dirname(FILENAME));|export const PROJECT_DIR = path.dirname(path.dirname(path.join(FILENAME, \"../..\")));|g' -i ./dist/bench/src/utils.js",
         "start:node": "npm run build && node dist/bench/src/index.js",
-        "gen-table": "node --loader ts-node/esm bin/gen-table.ts",
-        "gen-table:debug": "node --loader ts-node/esm --inspect-brk bin/gen-table.ts"
+        "gen-table": "node --loader ts-node/esm --enable-source-maps bin/gen-table.ts",
+        "gen-table:debug": "node --loader ts-node/esm --enable-source-maps --inspect-brk bin/gen-table.ts",
+        "gen-table2": "node --loader ts-node/esm --enable-source-maps bin/gen-table2.ts"
     },
     "dependencies": {
         "@comunica/bindings-factory": "^3.1.0",
         "@comunica/query-sparql": "=2.10.2",
         "csv-parse": "^5.5.5",
+        "minimist": "^1.2.8",
         "move-sparql-unions-to-top": "file:../dist",
         "object-hash": "^3.0.0",
         "object-sizeof": "^2.6.4",
         "sparqlalgebrajs": "^4.3.4",
+        "table": "^6.8.2",
         "ts-node": "^10.9.1"
     },
     "devDependencies": {
         "@rdfjs/types": "^1.1.0",
         "@types/debug": "^4.1.12",
+        "@types/minimist": "^1.2.5",
         "@types/node": "^20.11.30",
         "@types/object-hash": "^3.0.6",
         "@typescript-eslint/eslint-plugin": "^5.0.0",

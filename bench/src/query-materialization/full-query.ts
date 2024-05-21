@@ -9,14 +9,15 @@ import { areEquivalent } from "../query-tree/equivalence.js";
 import { addTimingA, computeTotal, createRawFQMTimings, FQMTimingK, type FQMTimings } from "../timings.js";
 import { roughSizeOf } from "../utils.js";
 
+import type { MaterializedView } from "./types.js";
 import type { Bindings } from "@rdfjs/types";
 
 const BF = new BindingsFactory();
 
-type MViews = { query: Algebra.Project; answer: Bindings[] }[];
+type Views = { query: Algebra.Project; answer: MaterializedView }[];
 
 export class FQMaterialization {
-    mViews: MViews = [];
+    mViews: Views = [];
 
     async answerQuery(queryS: string, queryLimit: number): Promise<[Bindings[], FQMTimings]> {
         const timings = createRawFQMTimings();
@@ -54,19 +55,20 @@ export class FQMaterialization {
             .map(x => x.query)
             .map(queryTree => roughSizeOf(queryTree))
             .reduce((acc, e) => acc + e, 0);
-
-        const mViews = new Set(this.mViews.map(x => x.answer));
-        for (const v of mViews) {
-            ret.answers += roughSizeOf(v);
-        }
+        ret.answers += this.mViews
+            .map(x => x.answer)
+            .map(mView => roughSizeOf(mView))
+            .reduce((acc, e) => acc + e, 0);
         return ret;
     }
 
-    static cloneMViews(mViews: MViews): MViews {
-        return mViews.map(({ query, answer }) => {
+    static cloneViews(views: Views): Views {
+        const ret = views.map(({ query, answer }) => {
             const queryC = structuredClone(query);
             const answerC = answer.map(y => BF.fromBindings(y));
             return { query: queryC, answer: answerC };
         });
+        assert(roughSizeOf(views) === roughSizeOf(ret));
+        return ret;
     }
 }
