@@ -29,4 +29,3 @@ WHERE
     ?person snvoc:lastName ?lastName .
     ?person snvoc:id ?personId .
 }
-ORDER BY DESC(?friendshipCreationDate) ?personId

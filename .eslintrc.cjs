@@ -34,6 +34,7 @@ module.exports = {
         jest: true,
     },
     rules: {
+        "camelcase": "error",
         "eqeqeq": "error",
         "guard-for-in": "error",
         "no-constant-condition": ["error", { checkLoops: false }],

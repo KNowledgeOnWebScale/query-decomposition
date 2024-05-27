@@ -3,7 +3,7 @@ import { performance } from "node:perf_hooks";
 
 import { BindingsFactory } from "@comunica/bindings-factory";
 import { QueryTree } from "move-sparql-unions-to-top/src/query-tree/index.js";
-import { moveUnionsToTop } from "move-sparql-unions-to-top/src/rewrite-unions/algorithm.js";
+import { rewriteUnionsToTop } from "move-sparql-unions-to-top/src/rewrite-unions/algorithm.js";
 import { Algebra, translate } from "sparqlalgebrajs";
 
 import { executeQuery } from "../execute-query.js";
@@ -24,7 +24,7 @@ type Views = { query: Algebra.Project; answer: VirtualView }[];
 export class DQMaterialization {
     views: Views = [];
 
-    async answerQuery(queryS: string, subqueryLimit: number): Promise<[Bindings[], DQMTimings]> {
+    async answerQuery(queryS: string, queryResultRowLimit: number): Promise<[Bindings[], DQMTimings]> {
         const timings = createRawDQMTimings();
 
         let start = performance.now();
@@ -50,11 +50,19 @@ export class DQMaterialization {
         addTimingB(timings, DQMTimingK.TRANSLATE_TO_REWRITE_TREE, start);
 
         start = performance.now();
-        const rewrittenQueryS = moveUnionsToTop(queryRT);
+        const qVariables = queryRT.variables;
+        let rewrittenQueryTree = rewriteUnionsToTop(queryRT);
         addTimingB(timings, DQMTimingK.REWRITE_TREE, start);
 
         start = performance.now();
-        const rewrittenQuery = translate(queryTreeToSparql(rewrittenQueryS));
+        if (rewrittenQueryTree.type !== QueryTree.types.PROJECT) {
+            rewrittenQueryTree = {
+                type: QueryTree.types.PROJECT,
+                variables: qVariables,
+                input: rewrittenQueryTree,
+            };
+        }
+        const rewrittenQuery = translate(queryTreeToSparql(rewrittenQueryTree));
         assert(rewrittenQuery.type === Algebra.types.PROJECT);
         addTimingB(timings, DQMTimingK.TRANSLATE_FROM_REWRITE_TREE_TO_TREE, start);
 
@@ -83,12 +91,11 @@ export class DQMaterialization {
 
                     sqStart = performance.now();
                     const subqueryS = algebraToSparql(subquery);
-                    const t = performance.now() - sqStart;
-                    const [subqueryAnswer, subqueryExecTime] = await executeQuery(
-                        subqueryS + `\nLIMIT ${subqueryLimit}`,
-                    );
+                    const timeToTranslateSqToS = performance.now() - sqStart;
+                    const [subqueryAnswer, subqueryExecTime] = await executeQuery(subqueryS);
+                    sqStart = performance.now();
                     this.views.push({ query: subquery, answer: [subqueryAnswer] });
-                    timeTakenMaterializeSq += t + subqueryExecTime;
+                    timeTakenMaterializeSq += performance.now() - sqStart + timeToTranslateSqToS + subqueryExecTime;
                     return [subqueryAnswer];
                 }
             }),
@@ -96,6 +103,7 @@ export class DQMaterialization {
         timings[DQMTimingK.CHECK_EXISTING_MATERIALIZED_SQ_VIEW] = { ms: timeTakenToCheck };
         timings[DQMTimingK.MATERIALIZE_SQS] = { ms: timeTakenMaterializeSq };
 
+        assert(subqueriesAnswers.flat().length < queryResultRowLimit);
         start = performance.now();
         // If there is only a single subquery than it is equal to the query
         if (subqueries.length > 1) {
@@ -123,8 +131,8 @@ export class DQMaterialization {
 
         // Set of materialized views referred to by the virtual views
         const mViews = new Set(this.views.flatMap(x => x.answer));
-        for (const v of mViews) {
-            ret.answers += roughSizeOf(v);
+        for (const mView of mViews) {
+            ret.answers += mView.map(bindings => roughSizeOf([...bindings])).reduce((acc, e) => acc + e, 0);
         }
         // Virtual views
         ret.answers += this.views.map(x => x.answer.length).reduce((acc, e) => acc + e, 0) * 8;
@@ -142,7 +150,6 @@ export class DQMaterialization {
             const answerC = answer.map(oldMView => oldToNewMView.get(oldMView)!);
             return { query: queryC, answer: answerC };
         });
-        assert(roughSizeOf(views) === roughSizeOf(ret));
         return ret;
     }
 }

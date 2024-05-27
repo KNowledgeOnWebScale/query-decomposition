@@ -7,23 +7,22 @@ import { areUnorderedEqual } from "move-sparql-unions-to-top/tests/utils/index.j
 import { isCompleteLog, mergeLogs, type Log, type LogRaw, type QueriesLog, type ScenariosLog } from "./log.js";
 import { DQMaterialization } from "./query-materialization/decomposed-query.js";
 import { FQMaterialization } from "./query-materialization/full-query.js";
-import { getQueryLimit as getQueryLimits } from "./query-materialization/query-limit.js";
 import { getQueryStringScenarios as createQueryStringScenarios } from "./query-strings/create-query-scenarios.js";
 import { getQueryStrings, getQueryStringsFromTemplates } from "./query-strings/get-query-strings.js";
 import { PROJECT_DIR } from "./utils.js";
 
 import type { Bindings } from "@rdfjs/types";
 
-export type BenchmarkName = "bsdm" | "ldbc" | "sp2b";
+export const BENCHMARK_NAMES = ["bsbm", "ldbc", "sp2b"] as const;
+export type BenchmarkName = (typeof BENCHMARK_NAMES)[number];
 
-await main();
+export async function main(dataSource: BenchmarkName): Promise<void> {
+    const WARMUP_COUNT = 2;
+    const STABLE_COUNT = 10;
 
-async function main() {
-    const STABLE_COUNT = 1;
+    console.log(`Warmup count = ${WARMUP_COUNT} and Stable count = ${STABLE_COUNT}`);
 
-    const BENCH_NAME: BenchmarkName = "bsdm";
-
-    const queryStrings = await getQueryStringsForBench(BENCH_NAME);
+    const queryStrings = await getQueryStringsForBench(dataSource);
 
     const fQMaterialization = new FQMaterialization();
     const dQMaterialization = new DQMaterialization();
@@ -32,19 +31,20 @@ async function main() {
     for (const [queryName, queryInsts] of queryStrings.entries()) {
         const logs: ScenariosLog[] = [];
         for (const queryS of queryInsts) {
-            const preWarmupFQMFullQueryState = FQMaterialization.cloneViews(fQMaterialization.mViews);
+            const preWarmupFQMFullQueryState = FQMaterialization.cloneViews(fQMaterialization.views);
             const preWarmupDQMFullQueryState = DQMaterialization.cloneViews(dQMaterialization.views);
-            await runQueryScenarios(queryS, fQMaterialization, dQMaterialization, { stableCount: 1 }); // Warmup
-            fQMaterialization.mViews = preWarmupFQMFullQueryState;
+            await runQueryScenarios(queryS, fQMaterialization, dQMaterialization, { stableCount: WARMUP_COUNT }); // Warmup
+            fQMaterialization.views = preWarmupFQMFullQueryState;
             dQMaterialization.views = preWarmupDQMFullQueryState;
 
-            console.log(String("==").repeat(40) + "WARMUP END" + String("==").repeat(40));
+            //console.log(String("==").repeat(40) + "WARMUP END" + String("==").repeat(40));
 
             const qLog = await runQueryScenarios(queryS, fQMaterialization, dQMaterialization, {
                 stableCount: STABLE_COUNT,
             });
 
             logs.push(qLog);
+            break;
         }
         const mergedLog = {
             fq: mergeLogs(logs.flatMap(x => x.fq)),
@@ -52,8 +52,6 @@ async function main() {
             changeOne: mergeLogs(logs.flatMap(x => x.changeOne)),
             onlyOne: mergeLogs(logs.flatMap(x => x.onlyOne)),
         };
-        console.log(JSON.stringify(mergedLog, null, 2));
-
         qLogs[queryName] = {
             avgs: {
                 fq: mergedLog.fq.avgs,
@@ -68,22 +66,22 @@ async function main() {
                 changeOne: mergedLog.changeOne.stdDevs,
             },
         };
-
-        console.log("=".repeat(100));
+        //console.log(JSON.stringify(qLogs[queryName]!.avgs, null, 2));
+        //console.log("=".repeat(100));
     }
 
-    await fs.writeFile(path.join(PROJECT_DIR, "results", `${BENCH_NAME}.json`), JSON.stringify(qLogs, null, 2));
+    await fs.writeFile(path.join(PROJECT_DIR, "results", `${dataSource}.json`), JSON.stringify(qLogs, null, 2));
 }
 
-async function getQueryStringsForBench(benchName: BenchmarkName): Promise<Map<string, string[]>> {
-    const isTemplated: { [key in BenchmarkName]: boolean } = {
-        bsdm: true,
-        ldbc: true,
-        sp2b: false,
-    };
+export const isDataSourceTemplated: { [key in BenchmarkName]: boolean } = {
+    bsbm: true,
+    ldbc: true,
+    sp2b: false,
+};
 
+async function getQueryStringsForBench(benchName: BenchmarkName): Promise<Map<string, string[]>> {
     let rawQueries: { name: string; queries: string[] }[];
-    if (isTemplated[benchName]) {
+    if (isDataSourceTemplated[benchName]) {
         rawQueries = await getQueryStringsFromTemplates(
             path.join(PROJECT_DIR, "data_sources", benchName, "query_templates"),
             path.join(PROJECT_DIR, "data_sources", benchName, "query_substitution_parameters"),
@@ -125,7 +123,7 @@ async function runQueryScenarios(
 
     let tLogs: Log[] = [];
     for (let i = 0; i < opts.stableCount; i++) {
-        fQMaterialization.mViews = [];
+        fQMaterialization.views = [];
         dQMaterialization.views = [];
         tLogs.push(await runQuery(queryS, fQMaterialization, dQMaterialization));
     }
@@ -133,11 +131,11 @@ async function runQueryScenarios(
     tLogs = [];
     console.log(String("--").repeat(80));
 
-    const fQMFullQueryState = FQMaterialization.cloneViews(fQMaterialization.mViews);
+    const fQMFullQueryState = FQMaterialization.cloneViews(fQMaterialization.views);
     const dQMFullQueryState = DQMaterialization.cloneViews(dQMaterialization.views);
 
     for (let i = 0; i < opts.stableCount; i++) {
-        fQMaterialization.mViews = FQMaterialization.cloneViews(fQMFullQueryState);
+        fQMaterialization.views = FQMaterialization.cloneViews(fQMFullQueryState);
         dQMaterialization.views = DQMaterialization.cloneViews(dQMFullQueryState);
         tLogs.push(await runQuery(queryS, fQMaterialization, dQMaterialization));
     }
@@ -145,9 +143,20 @@ async function runQueryScenarios(
     tLogs = [];
     console.log(String("--").repeat(80));
 
+    for (const onlyOneQueryS of onlyOneQuerySs) {
+        for (let i = 0; i < opts.stableCount; i++) {
+            fQMaterialization.views = FQMaterialization.cloneViews(fQMFullQueryState);
+            dQMaterialization.views = DQMaterialization.cloneViews(dQMFullQueryState);
+            tLogs.push(await runQuery(onlyOneQueryS, fQMaterialization, dQMaterialization));
+        }
+    }
+    qLog.onlyOne = tLogs;
+    tLogs = [];
+    console.log(String("--").repeat(80));
+
     for (const changeOneQueryS of changeOneQuerySs) {
         for (let i = 0; i < opts.stableCount; i++) {
-            fQMaterialization.mViews = FQMaterialization.cloneViews(fQMFullQueryState);
+            fQMaterialization.views = FQMaterialization.cloneViews(fQMFullQueryState);
             dQMaterialization.views = DQMaterialization.cloneViews(dQMFullQueryState);
             tLogs.push(await runQuery(changeOneQueryS, fQMaterialization, dQMaterialization));
         }
@@ -156,18 +165,10 @@ async function runQueryScenarios(
     tLogs = [];
     console.log(String("--").repeat(80));
 
-    for (const onlyOneQueryS of onlyOneQuerySs) {
-        for (let i = 0; i < opts.stableCount; i++) {
-            fQMaterialization.mViews = FQMaterialization.cloneViews(fQMFullQueryState);
-            dQMaterialization.views = DQMaterialization.cloneViews(dQMFullQueryState);
-            tLogs.push(await runQuery(onlyOneQueryS, fQMaterialization, dQMaterialization));
-        }
-    }
-    qLog.onlyOne = tLogs;
-    tLogs = [];
-
     return qLog;
 }
+
+export const QUERY_RESULT_ROW_LIMIT = 10_000; // Taken over from virtuoso
 
 async function runQuery(
     queryS: string,
@@ -176,15 +177,16 @@ async function runQuery(
 ): Promise<Log> {
     const log: LogRaw = { fQMaterialization: {}, dQMaterialization: {} };
 
-    const queryLimits = getQueryLimits(queryS);
-
     let fQMAnswer: Bindings[];
     {
-        [fQMAnswer, log.fQMaterialization.timings] = await fQMaterialization.answerQuery(queryS, queryLimits.query);
+        [fQMAnswer, log.fQMaterialization.timings] = await fQMaterialization.answerQuery(
+            queryS,
+            QUERY_RESULT_ROW_LIMIT,
+        );
 
         const viewSize = fQMaterialization.roughSizeOfMaterializedViews();
         const total = viewSize.queryTrees + viewSize.answers;
-        log.fQMaterialization.mViewSize = {
+        log.fQMaterialization.viewSize = {
             queries: { bytes: viewSize.queryTrees, pct: viewSize.queryTrees / total },
             answers: { bytes: viewSize.answers, pct: viewSize.answers / total },
         };
@@ -192,37 +194,36 @@ async function runQuery(
 
     let dQMAnswer: Bindings[];
     {
-        [dQMAnswer, log.dQMaterialization.timings] = await dQMaterialization.answerQuery(queryS, queryLimits.subquery);
+        [dQMAnswer, log.dQMaterialization.timings] = await dQMaterialization.answerQuery(
+            queryS,
+            QUERY_RESULT_ROW_LIMIT,
+        );
 
         const viewSize = dQMaterialization.roughSizeOfMaterializedViews();
         const total = viewSize.queryTrees + viewSize.answers;
-        log.dQMaterialization.mViewSize = {
+        log.dQMaterialization.viewSize = {
             queries: { bytes: viewSize.queryTrees, pct: viewSize.queryTrees / total },
             answers: { bytes: viewSize.answers, pct: viewSize.answers / total },
         };
     }
 
-    log.dQMtoFQMViewSizePct = {
-        queries: log.dQMaterialization.mViewSize.queries.bytes / log.fQMaterialization.mViewSize.queries.bytes,
-        answers: log.dQMaterialization.mViewSize.answers.bytes / log.dQMaterialization.mViewSize.answers.bytes,
+    log.dQMtoFQViewSizePct = {
+        queries: log.dQMaterialization.viewSize.queries.bytes / log.fQMaterialization.viewSize.queries.bytes,
+        answers: log.dQMaterialization.viewSize.answers.bytes / log.dQMaterialization.viewSize.answers.bytes,
         total:
-            (log.dQMaterialization.mViewSize.queries.bytes + log.dQMaterialization.mViewSize.answers.bytes) /
-            (log.fQMaterialization.mViewSize.queries.bytes + log.dQMaterialization.mViewSize.answers.bytes),
+            (log.dQMaterialization.viewSize.queries.bytes + log.dQMaterialization.viewSize.answers.bytes) /
+            (log.fQMaterialization.viewSize.queries.bytes + log.dQMaterialization.viewSize.answers.bytes),
     };
 
-    // If the hard limit is reached, then the concatenation of subquery results might no longer include
-    // the same bindings as the single query because the bindings are returned in no particular order...
-    if (fQMAnswer.length !== queryLimits.query) {
-        assert(
-            areUnorderedEqual(fQMAnswer, dQMAnswer, (x, y) => {
-                // Ensure the methods didn't get lost in a clone operation
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                assert(x.equals !== undefined && y.equals !== undefined);
-                return x.equals(y);
-            }),
-            "Query answer given by full query and decomposed query materialization don't match",
-        );
-    }
+    assert(
+        areUnorderedEqual(fQMAnswer, dQMAnswer, (x, y) => {
+            // Ensure the methods didn't get lost in a clone operation
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            assert(x.equals !== undefined && y.equals !== undefined);
+            return x.equals(y);
+        }),
+        "Query answer given by full query and decomposed query materialization don't match",
+    );
 
     assert(isCompleteLog(log));
 

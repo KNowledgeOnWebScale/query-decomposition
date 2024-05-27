@@ -1,4 +1,2 @@
 tag|date
-Wolfgang_Amadeus_Mozart|1323302400000
 Napoleon|1323302400000
-Saddam_Hussein|1323302400000

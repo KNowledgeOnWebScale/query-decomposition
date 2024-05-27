@@ -1,3 +1,5 @@
+The `data_sources` folder is included in the zip uploaded to [here](TODOLINKHERE)
+
 The path hierarchy of the data sources (that are themselves benchmarks) is as follows:
 1. Root folder for all sources is `data_sources`
 2. Each data data source has one subfolder with the shortest version of its name
@@ -10,11 +12,11 @@ The path hierarchy of the data sources (that are themselves benchmarks) is as fo
    - `src`: the source files of the benchmark that where used
    - `instructions.md`: any data source benchmark specific instructions, such as dataset generation
 
-After generating the dataset a SPARQL endpoint must be setup using Virtuoso for each data source/dataset, this can be done easily with docker as follows:
+A SPARQL endpoint must be setup using Virtuoso for each data source/dataset, this can be done easily with docker as follows:
 ```sh
 cd bench
-docker run --name virtdb_sp2b --interactive --tty --env DBA_PASSWORD=1234 --publish 1111:1111 --publish  8890:8890 --volume `pwd`/data_sources/$NAME/db:/database openlink/virtuoso-opensource-7@sha256:e07868a3db9090400332eaa8ee694b8cf9bf7eebc26db6bbdc3bb92fd30ed010
+docker run --detach --name virtdb_$NAME --env DBA_PASSWORD=1234 --publish 1111:1111 --publish  8890:8890 --volume `pwd`/data_sources/$NAME/db:/database openlink/virtuoso-opensource-7@sha256:e07868a3db9090400332eaa8ee694b8cf9bf7eebc26db6bbdc3bb92fd30ed010
 ```
 Where `$NAME` is again the shortest version of the data source benchmark names (so no spaces, lower, etc).
 This will create or use the db folder in the current working directory the store the state of the database, such that the docker container can be restarted with losing the persisted data.
-The instructions for loading the generated dataset files into Virtuoso's SPARQL endpoint's default graph (which is what all queries are ran on) can be found [here](./setup_virtuose.md). Note that for each data source a separate SPARQL endpoint must be setup with a default graph with its dataset in it. The easiest way to collect the result is starting the docker container, loading in the datasets, running the benchmark which will record its results to files and subsequently repeat this process for each data source benchmark.
+The instructions for loading the generated dataset files into Virtuoso's SPARQL endpoint's default graph (which is what all queries are ran on) can be found [here](./setup_virtuose.md). Note that for each data source a separate SPARQL endpoint must be setup with a default graph with its dataset in it.

@@ -5,20 +5,20 @@ import { parse as parseCsv } from "csv-parse/sync";
 
 import { getContentsOfFilesInDir, type Path } from "../utils.js";
 
-export async function getQueryStrings(queries_dir: Path): Promise<{ name: string; value: string }[]> {
-    const queries = await getRawQueriesStrings(queries_dir);
+export async function getQueryStrings(queriesDir: Path): Promise<{ name: string; value: string }[]> {
+    const queries = await getRawQueriesStrings(queriesDir);
     return queries.map(([filePath, queryS]) => {
         return { name: path.basename(filePath).replace(".sparql", ""), value: queryS };
     });
 }
 
 export async function getQueryStringsFromTemplates(
-    templates_dir: Path,
-    substitutions_dir: Path,
+    templatesDir: Path,
+    substitutionsDir: Path,
 ): Promise<{ name: string; queries: string[] }[]> {
-    const templates = await getRawQueriesStrings(templates_dir);
+    const templates = await getRawQueriesStrings(templatesDir);
     const allSubstitutions = new Map(
-        (await getContentsOfFilesInDir(substitutions_dir)).map(([filePath, contents]) => [
+        (await getContentsOfFilesInDir(substitutionsDir)).map(([filePath, contents]) => [
             path.basename(filePath).replace("_param.txt", ""),
             parseCsv(contents, { delimiter: "|", columns: true }) as Record<string, string>[],
         ]),
@@ -28,13 +28,13 @@ export async function getQueryStringsFromTemplates(
     for (const [filePath, template] of templates) {
         //template = fixupQueryTemplate(template);
 
-        const name = path
+        const subName = path
             .basename(filePath)
             .replace(/-(complex|short)/, "")
             .replace("-", "_")
-            .replace(/([0-9+])(-[a-z-]+)?(_[a-z])?/, "$1")
-            .replace(/\.sparql$/, "");
-        const substitutions = allSubstitutions.get(name);
+            .replace(/([0-9+])(-[a-z-]+)?/, "$1")
+            .replace(/(_[a-z])?\.sparql$/, "");
+        const substitutions = allSubstitutions.get(subName);
         assert(substitutions !== undefined);
 
         const CREATE_TEMPLATE_VAR_RE = (name: string) => new RegExp(`\\$${name}\\b`, "g");
@@ -50,7 +50,7 @@ export async function getQueryStringsFromTemplates(
                     queryS = queryS.replaceAll(`$${k.replace(/IRI$/, "")}`, `<${v}>`);
                 } else if (k.toLowerCase().includes("date")) {
                     const date = new Date(parseInt(v)).toISOString();
-                    queryS = queryS.replaceAll(`$${k}`, `"${date}"^^xsd:datetime`);
+                    queryS = queryS.replaceAll(`$${k}`, `"${date}"^^xsd:dateTime`);
                 } else if (/^\d+$/.test(v)) {
                     queryS = queryS.replaceAll(`$${k}`, `"${v}"^^xsd:long`);
                 } else {
@@ -59,7 +59,7 @@ export async function getQueryStringsFromTemplates(
             }
             assert(
                 !CREATE_TEMPLATE_VAR_RE("[a-zA-Z]+").test(queryS),
-                `Substitutions for query '${filePath}' with name '${name}' is missing variables`,
+                `Substitutions for query '${filePath}' with name '${subName}' is missing variables`,
             );
 
             queryInsts.queries.push(queryS);
@@ -69,6 +69,6 @@ export async function getQueryStringsFromTemplates(
     return ret;
 }
 
-async function getRawQueriesStrings(queries_dir: Path) {
-    return getContentsOfFilesInDir(queries_dir, filePath => !path.basename(filePath).startsWith("_"));
+async function getRawQueriesStrings(queriesDir: Path) {
+    return getContentsOfFilesInDir(queriesDir);
 }

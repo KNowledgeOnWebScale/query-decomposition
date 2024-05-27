@@ -1,4 +1,2 @@
 # Generated data
-/data_sources/*/db
-/data_sources/*/dataset
-/data_sources/bsdm/src/td_data
+/data_sources

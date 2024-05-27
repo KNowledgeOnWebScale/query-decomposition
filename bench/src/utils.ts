@@ -17,14 +17,14 @@ export const PROJECT_DIR = path.dirname(path.dirname(FILENAME));
 
 export async function getContentsOfFilesInDir(
     dir: Path,
-    filesFilter: (filePath: string) => boolean = () => true,
+    filesFilter: (filename: string) => boolean = () => true,
 ): Promise<(readonly [Path, string])[]> {
     try {
         const filenames = await fs.readdir(dir);
         return Promise.all(
             filenames
                 .map(filename => path.join(dir, filename))
-                .filter(filePath => filesFilter(filePath))
+                .filter(filePath => filesFilter(path.basename(filePath, path.extname(filePath))))
                 .map(async filePath => {
                     try {
                         const content = await fs.readFile(filePath, "utf-8");

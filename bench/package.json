@@ -5,13 +5,14 @@
     "type": "module",
     "main": "src/index.js",
     "scripts": {
-        "start": "node --loader ts-node/esm --enable-source-maps src/index.ts",
-        "start:debug": "node --loader ts-node/esm --enable-source-maps --inspect-brk src/index.ts",
+        "start": "node --loader ts-node/esm --enable-source-maps bin/bench.ts",
+        "start:debug": "node --loader ts-node/esm --enable-source-maps --inspect-brk bin/bench.ts",
         "build": "tsc --noEmit false && sed 's|export const PROJECT_DIR = path.dirname(path.dirname(FILENAME));|export const PROJECT_DIR = path.dirname(path.dirname(path.join(FILENAME, \"../..\")));|g' -i ./dist/bench/src/utils.js",
-        "start:node": "npm run build && node dist/bench/src/index.js",
+        "start:node": "npm run build && node dist/bench/bin/bench.js",
         "gen-table": "node --loader ts-node/esm --enable-source-maps bin/gen-table.ts",
         "gen-table:debug": "node --loader ts-node/esm --enable-source-maps --inspect-brk bin/gen-table.ts",
-        "gen-table2": "node --loader ts-node/esm --enable-source-maps bin/gen-table2.ts"
+        "avg-union-operands-count": "node --loader ts-node/esm --enable-source-maps bin/avg-union-operands-count.ts",
+        "number-of-results-per-query-substitution": "node --loader ts-node/esm --enable-source-maps bin/number-of-results-per-query-substitution.ts"
     },
     "dependencies": {
         "@comunica/bindings-factory": "^3.1.0",
@@ -22,7 +23,6 @@
         "object-hash": "^3.0.0",
         "object-sizeof": "^2.6.4",
         "sparqlalgebrajs": "^4.3.4",
-        "table": "^6.8.2",
         "ts-node": "^10.9.1"
     },
     "devDependencies": {
