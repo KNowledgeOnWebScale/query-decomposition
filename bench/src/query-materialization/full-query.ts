@@ -17,9 +17,9 @@ const BF = new BindingsFactory();
 type Views = { query: Algebra.Project; answer: MaterializedView }[];
 
 export class FQMaterialization {
-    mViews: Views = [];
+    views: Views = [];
 
-    async answerQuery(queryS: string, queryLimit: number): Promise<[Bindings[], FQMTimings]> {
+    async answerQuery(queryS: string, queryResultRowLimit: number): Promise<[Bindings[], FQMTimings]> {
         const timings = createRawFQMTimings();
 
         let start = performance.now();
@@ -28,7 +28,7 @@ export class FQMaterialization {
         addTimingA(timings, FQMTimingK.TRANSLATE_TO_TREE, start);
 
         start = performance.now();
-        let answer = this.mViews.find(({ query: materializedQuery2 }) =>
+        let answer = this.views.find(({ query: materializedQuery2 }) =>
             areEquivalent(materializedQuery2, query),
         )?.answer;
         addTimingA(timings, FQMTimingK.CHECK_EXISTING_MATERIALIZED_VIEW, start);
@@ -39,9 +39,10 @@ export class FQMaterialization {
         } else {
             const t = performance.now() - start;
             let queryExecTime: number;
-            [answer, queryExecTime] = await executeQuery(queryS + `\nLIMIT ${queryLimit}`);
+            [answer, queryExecTime] = await executeQuery(queryS);
+            assert(answer.length < queryResultRowLimit);
             start = performance.now();
-            this.mViews.push({ query, answer });
+            this.views.push({ query, answer });
             timings[FQMTimingK.MATERIALIZE_QUERY] = { ms: performance.now() - start + t + queryExecTime };
         }
 
@@ -51,13 +52,13 @@ export class FQMaterialization {
     roughSizeOfMaterializedViews(): { queryTrees: number; answers: number } {
         const ret = { queryTrees: 0, answers: 0 };
 
-        ret.queryTrees += this.mViews
+        ret.queryTrees += this.views
             .map(x => x.query)
             .map(queryTree => roughSizeOf(queryTree))
             .reduce((acc, e) => acc + e, 0);
-        ret.answers += this.mViews
-            .map(x => x.answer)
-            .map(mView => roughSizeOf(mView))
+        ret.answers += this.views
+            .flatMap(x => x.answer)
+            .map(mView => roughSizeOf([...mView]))
             .reduce((acc, e) => acc + e, 0);
         return ret;
     }
@@ -68,7 +69,6 @@ export class FQMaterialization {
             const answerC = answer.map(y => BF.fromBindings(y));
             return { query: queryC, answer: answerC };
         });
-        assert(roughSizeOf(views) === roughSizeOf(ret));
         return ret;
     }
 }

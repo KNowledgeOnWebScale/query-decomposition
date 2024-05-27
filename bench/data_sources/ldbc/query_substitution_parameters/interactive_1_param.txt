@@ -1,4 +1,2 @@
 personId|firstName
 10995116277882|John
-6597069767668|Mihai
-454|Karl

@@ -17,30 +17,30 @@ export interface ScenariosLog {
     onlyOne: Log[];
 }
 
-interface mViewSizeLog {
+interface viewSizeLog {
     queries: { bytes: number; pct: number };
     answers: { bytes: number; pct: number };
 }
 
 export interface Log {
-    fQMaterialization: { timings: FQMTimings; mViewSize: mViewSizeLog };
-    dQMaterialization: { timings: DQMTimings; mViewSize: mViewSizeLog };
-    dQMtoFQMViewSizePct: { queries: number; answers: number; total: number };
+    fQMaterialization: { timings: FQMTimings; viewSize: viewSizeLog };
+    dQMaterialization: { timings: DQMTimings; viewSize: viewSizeLog };
+    dQMtoFQViewSizePct: { queries: number; answers: number; total: number };
 }
 
 export interface LogRaw {
-    fQMaterialization: { timings?: FQMTimings; mViewSize?: mViewSizeLog };
-    dQMaterialization: { timings?: DQMTimings; mViewSize?: mViewSizeLog };
-    dQMtoFQMViewSizePct?: { queries: number; answers: number; total: number };
+    fQMaterialization: { timings?: FQMTimings; viewSize?: viewSizeLog };
+    dQMaterialization: { timings?: DQMTimings; viewSize?: viewSizeLog };
+    dQMtoFQViewSizePct?: { queries: number; answers: number; total: number };
 }
 
 export function isCompleteLog(log: LogRaw): log is Log {
     return (
         log.fQMaterialization.timings !== undefined &&
-        log.fQMaterialization.mViewSize !== undefined &&
+        log.fQMaterialization.viewSize !== undefined &&
         log.dQMaterialization.timings !== undefined &&
-        log.dQMaterialization.mViewSize !== undefined &&
-        log.dQMtoFQMViewSizePct !== undefined
+        log.dQMaterialization.viewSize !== undefined &&
+        log.dQMtoFQViewSizePct !== undefined
     );
 }
 
@@ -60,19 +60,19 @@ export function mergeLogs(logs: Log[]): { avgs: Log; stdDevs: Log } {
     const avgs: Log = {
         fQMaterialization: {
             timings: timings4 as FQMTimings,
-            mViewSize: {
-                queries: calcAvgO(logs.map(x => x.fQMaterialization.mViewSize.queries)),
-                answers: calcAvgO(logs.map(x => x.fQMaterialization.mViewSize.answers)),
+            viewSize: {
+                queries: calcAvgO(logs.map(x => x.fQMaterialization.viewSize.queries)),
+                answers: calcAvgO(logs.map(x => x.fQMaterialization.viewSize.answers)),
             },
         },
         dQMaterialization: {
             timings: timings5 as DQMTimings,
-            mViewSize: {
-                queries: calcAvgO(logs.map(x => x.dQMaterialization.mViewSize.queries)),
-                answers: calcAvgO(logs.map(x => x.dQMaterialization.mViewSize.answers)),
+            viewSize: {
+                queries: calcAvgO(logs.map(x => x.dQMaterialization.viewSize.queries)),
+                answers: calcAvgO(logs.map(x => x.dQMaterialization.viewSize.answers)),
             },
         },
-        dQMtoFQMViewSizePct: calcAvgO(logs.map(x => x.dQMtoFQMViewSizePct)),
+        dQMtoFQViewSizePct: calcAvgO(logs.map(x => x.dQMtoFQViewSizePct)),
     };
 
     const timings2: Partial<FQMTimings> = {};
@@ -102,33 +102,33 @@ export function mergeLogs(logs: Log[]): { avgs: Log; stdDevs: Log } {
     const stdDevs: Log = {
         fQMaterialization: {
             timings: timings2 as FQMTimings,
-            mViewSize: {
+            viewSize: {
                 queries: calcStdDevO(
-                    logs.map(x => x.fQMaterialization.mViewSize.queries),
-                    avgs.fQMaterialization.mViewSize.queries,
+                    logs.map(x => x.fQMaterialization.viewSize.queries),
+                    avgs.fQMaterialization.viewSize.queries,
                 ),
                 answers: calcStdDevO(
-                    logs.map(x => x.fQMaterialization.mViewSize.answers),
-                    avgs.fQMaterialization.mViewSize.answers,
+                    logs.map(x => x.fQMaterialization.viewSize.answers),
+                    avgs.fQMaterialization.viewSize.answers,
                 ),
             },
         },
         dQMaterialization: {
             timings: timings3 as DQMTimings,
-            mViewSize: {
+            viewSize: {
                 queries: calcStdDevO(
-                    logs.map(x => x.dQMaterialization.mViewSize.queries),
-                    avgs.dQMaterialization.mViewSize.queries,
+                    logs.map(x => x.dQMaterialization.viewSize.queries),
+                    avgs.dQMaterialization.viewSize.queries,
                 ),
                 answers: calcStdDevO(
-                    logs.map(x => x.dQMaterialization.mViewSize.answers),
-                    avgs.dQMaterialization.mViewSize.answers,
+                    logs.map(x => x.dQMaterialization.viewSize.answers),
+                    avgs.dQMaterialization.viewSize.answers,
                 ),
             },
         },
-        dQMtoFQMViewSizePct: calcStdDevO(
-            logs.map(x => x.dQMtoFQMViewSizePct),
-            avgs.dQMtoFQMViewSizePct,
+        dQMtoFQViewSizePct: calcStdDevO(
+            logs.map(x => x.dQMtoFQViewSizePct),
+            avgs.dQMtoFQViewSizePct,
         ),
     };
 

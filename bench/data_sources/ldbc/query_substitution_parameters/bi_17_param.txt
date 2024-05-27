@@ -1,4 +1,2 @@
 country
 Kazakhstan
-Ukraine
-Argentina

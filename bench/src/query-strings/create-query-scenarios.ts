@@ -1,11 +1,9 @@
 import { strict as assert } from "node:assert";
 
-import { QueryTree } from "move-sparql-unions-to-top/src/query-tree/index.js";
-import { moveUnionsToTop } from "move-sparql-unions-to-top/src/rewrite-unions/algorithm.js";
+import { maximallyDecomposeSelectQuery } from "move-sparql-unions-to-top/src/index.js";
 import { Algebra, translate } from "sparqlalgebrajs";
 
-import { decomposeQuery } from "../query-materialization/decompose-query.js";
-import { algebraToSparql as algebraToSparql, queryTreeToSparql } from "../utils.js";
+import { algebraToSparql as algebraToSparql } from "../utils.js";
 
 export function getQueryStringScenarios(queryS: string): { changeOne: string[]; onlyOne: string[] } {
     assert(isUnionRewritable(queryS), "Union is not rewritable: " + queryS);
@@ -69,12 +67,5 @@ function changeFirstBGP(node: Algebra.Operation) {
 }
 
 function isUnionRewritable(queryS: string): boolean {
-    const query = QueryTree.translate(queryS);
-    assert(query.type === QueryTree.types.PROJECT);
-    const rewrittenQuery = moveUnionsToTop(query);
-    const rewrittenQueryTree = translate(queryTreeToSparql(rewrittenQuery));
-    assert(rewrittenQueryTree.type === Algebra.types.PROJECT);
-    const subqueries = decomposeQuery(rewrittenQueryTree);
-
-    return subqueries.length > 1;
+    return maximallyDecomposeSelectQuery(queryS).length > 1;
 }
