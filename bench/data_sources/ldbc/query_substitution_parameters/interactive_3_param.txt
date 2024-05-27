@@ -1,2 +1,0 @@
-personId|startDate|durationDays|countryXName|countryYName
-4398046511592|1304208000000|29|Chad|Dominican_Republic

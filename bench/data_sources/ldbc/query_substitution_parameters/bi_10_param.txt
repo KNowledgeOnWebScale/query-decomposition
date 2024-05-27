@@ -1,2 +1,0 @@
-tag|date
-Napoleon|1323302400000
