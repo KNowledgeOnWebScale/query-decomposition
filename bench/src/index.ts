@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import fs from "node:fs/promises";
 import * as path from "node:path";
 
-import { areUnorderedEqual } from "move-sparql-unions-to-top/tests/utils/index.js";
+import { areUnorderedEqual } from "rewrite-sparql-unions-to-top/tests/utils/index.js";
 
 import { isCompleteLog, mergeLogs, type Log, type LogRaw, type QueriesLog, type ScenariosLog } from "./log.js";
 import { DQMaterialization } from "./query-materialization/decomposed-query.js";

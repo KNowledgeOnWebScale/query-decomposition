@@ -1,12 +1,13 @@
 {
-    "name": "move-sparql-unions-to-top",
-    "author": "Thibeau Vercruyssen",
+    "name": "rewrite-sparql-unions-to-top",
     "version": "0.1.0",
+    "license": "MIT",
+    "author": "Thibeau Vercruyssen",
     "type": "module",
     "scripts": {
         "build": "tsc --noEmit false && resolve-tspaths",
         "tests": "jest",
-        "tests:debug": "DEBUG=move-sparql-unions-to-top:* node --inspect-brk node_modules/.bin/jest --runInBand",
+        "tests:debug": "DEBUG=rewrite-sparql-unions-to-top:* node --inspect-brk node_modules/.bin/jest --runInBand",
         "prepare": "husky install"
     },
     "dependencies": {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { areOrderedEqual } from "move-sparql-unions-to-top/tests/utils/index.js";
+import { areOrderedEqual } from "rewrite-sparql-unions-to-top/tests/utils/index.js";
 
 import type { BenchmarkName } from "../index.js";
 import type { Entries } from "type-fest";

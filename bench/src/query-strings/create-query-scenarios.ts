@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 
-import { maximallyDecomposeSelectQuery } from "move-sparql-unions-to-top/src/index.js";
+import { maximallyDecomposeSelectQuery } from "rewrite-sparql-unions-to-top/src/index.js";
 import { Algebra, translate } from "sparqlalgebrajs";
 
 import { algebraToSparql as algebraToSparql } from "../utils.js";
@@ -14,22 +14,25 @@ export function getQueryStringScenarios(queryS: string): { changeOne: string[]; 
     const union = findFirstOfType(Algebra.types.UNION, q);
     assert(union !== null);
 
+    const cloneQueryAndFindUnion = () => {
+        const qC = structuredClone(q);
+        const unionC = findFirstOfType(Algebra.types.UNION, qC);
+        assert(unionC !== null && unionC.input.length >= 2);
+        return [qC, unionC] as const;
+    };
+
     const ret: ReturnType<typeof getQueryStringScenarios> = { changeOne: [], onlyOne: [] };
     for (let i = 0; i < union.input.length; i++) {
         {
-            const qC = structuredClone(q);
-            const union2 = findFirstOfType(Algebra.types.UNION, qC);
-            assert(union2 !== null && union2.input.length >= 2);
-            union2.input = [union2.input[i]!];
-            // Roundtrip to ensure that the union is fully erased
+            const [qC, unionC] = cloneQueryAndFindUnion();
+            unionC.input = [unionC.input[i]!];
+            // Roundtrip to ensure that the union is fully replaced by its operand
             ret.onlyOne.push(algebraToSparql(translate(algebraToSparql(qC)) as Algebra.Project));
         }
         {
-            const qC2 = structuredClone(q);
-            const union22 = findFirstOfType(Algebra.types.UNION, qC2);
-            assert(union22 !== null && union22.input.length >= 2);
-            changeFirstBGP(union22.input[i]!);
-            ret.changeOne.push(algebraToSparql(qC2));
+            const [qC, unionC] = cloneQueryAndFindUnion();
+            changeFirstBGP(unionC.input[i]!);
+            ret.changeOne.push(algebraToSparql(qC));
         }
     }
     return ret;

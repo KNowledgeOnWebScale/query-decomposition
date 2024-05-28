@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
 
 import { BindingsFactory } from "@comunica/bindings-factory";
-import { QueryTree } from "move-sparql-unions-to-top/src/query-tree/index.js";
-import { rewriteUnionsToTop } from "move-sparql-unions-to-top/src/rewrite-unions/algorithm.js";
+import { QueryTree } from "rewrite-sparql-unions-to-top/src/query-tree/index.js";
+import { rewriteUnionsToTop } from "rewrite-sparql-unions-to-top/src/rewrite-unions/algorithm.js";
 import { Algebra, translate } from "sparqlalgebrajs";
 
 import { executeQuery } from "../execute-query.js";
@@ -81,7 +81,6 @@ export class DQMaterialization {
                 let sqStart = performance.now();
                 const q = this.views.find(({ query: materializedQuery }) => areEquivalent(materializedQuery, subquery));
 
-                //sqStart = performance.now();
                 if (q !== undefined) {
                     timeTakenToCheck += performance.now() - sqStart;
                     //console.log("DQM SQ AVOIDED in bytes:", roughSizeOf(q.answer));
@@ -103,7 +102,6 @@ export class DQMaterialization {
         timings[DQMTimingK.CHECK_EXISTING_MATERIALIZED_SQ_VIEW] = { ms: timeTakenToCheck };
         timings[DQMTimingK.MATERIALIZE_SQS] = { ms: timeTakenMaterializeSq };
 
-        assert(subqueriesAnswers.flat().length < queryResultRowLimit);
         start = performance.now();
         // If there is only a single subquery than it is equal to the query
         if (subqueries.length > 1) {
@@ -117,6 +115,7 @@ export class DQMaterialization {
         start = performance.now();
         const answer = this.views.at(-1)!.answer.flat();
         addTimingB(timings, DQMTimingK.ANSWER_QUERY_FROM_SQS, start);
+        assert(answer.length < queryResultRowLimit);
 
         return [answer, computeTotal(timings)];
     }

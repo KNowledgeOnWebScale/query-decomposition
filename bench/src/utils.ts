@@ -3,9 +3,9 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import * as RDF from "@rdfjs/types";
-import { QueryTree } from "move-sparql-unions-to-top/src/query-tree/index.js";
 import hash from "object-hash";
 import sizeof from "object-sizeof";
+import { QueryTree } from "rewrite-sparql-unions-to-top/src/query-tree/index.js";
 import { Algebra, toSparql } from "sparqlalgebrajs";
 
 import type objectHash from "object-hash";
