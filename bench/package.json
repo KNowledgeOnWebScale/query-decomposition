@@ -12,7 +12,8 @@
         "gen-table": "node --loader ts-node/esm --enable-source-maps bin/gen-table.ts",
         "gen-table:debug": "node --loader ts-node/esm --enable-source-maps --inspect-brk bin/gen-table.ts",
         "calc-avg-union-operands-count": "node --loader ts-node/esm --enable-source-maps bin/calc-avg-union-operands-count.ts",
-        "number-of-results-per-query-substitution": "node --loader ts-node/esm --enable-source-maps bin/number-of-results-per-query-substitution.ts"
+        "number-of-results-per-query-substitution": "node --loader ts-node/esm --enable-source-maps bin/number-of-results-per-query-substitution.ts",
+        "calc-avg-overhead-of-rewriting-and-decomposing": "node --loader ts-node/esm --enable-source-maps bin/calc-avg-overhead-of-rewriting-and-decomposing"
     },
     "dependencies": {
         "@comunica/bindings-factory": "<3",

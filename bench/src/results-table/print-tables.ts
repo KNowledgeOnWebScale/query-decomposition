@@ -6,7 +6,7 @@ import { getContentsOfFilesInDir, PROJECT_DIR } from "../utils.js";
 import { Col, Table } from "./table.js";
 
 import type { BenchmarkName } from "../index.js";
-import type { QueriesLog as QueryLogs } from "../log.js";
+import type { QueriesLog } from "../log.js";
 
 enum Row {
     VIEWS_SIZE = "Sizeof views",
@@ -23,7 +23,7 @@ export async function printTable(stdDevs: boolean): Promise<void> {
     const results = new Map(
         (await getContentsOfFilesInDir(path.join(PROJECT_DIR, "results"))).map(x => {
             const benchName = path.basename(x[0], path.extname(x[0]));
-            const logs = JSON.parse(x[1]) as QueryLogs;
+            const logs = JSON.parse(x[1]) as QueriesLog;
 
             return [benchName, logs];
         }),
@@ -46,7 +46,7 @@ export async function printTable(stdDevs: boolean): Promise<void> {
     console.log(table);
 }
 
-function createTable(stdDevs: boolean, benchName: BenchmarkName, qLogs: QueryLogs): string {
+function createTable(stdDevs: boolean, benchName: BenchmarkName, qLogs: QueriesLog): string {
     const table = new Table(
         benchName,
         [
@@ -69,10 +69,6 @@ function createTable(stdDevs: boolean, benchName: BenchmarkName, qLogs: QueryLog
             [Col.ONLY_ONE, log.onlyOne],
             [Col.CHANGE_ONE, log.changeOne],
         ] as const) {
-            // if (queryName === "interactive-complex-1" && row === Col.CHANGE_ONE) {
-            //     console.log(JSON.stringify(sitLog, null, 2))
-            // }
-
             const { timings: fQMT, viewSize: fQMVS } = sitLog.fQMaterialization;
             const { timings: dQMT, viewSize: dQMVS } = sitLog.dQMaterialization;
 
