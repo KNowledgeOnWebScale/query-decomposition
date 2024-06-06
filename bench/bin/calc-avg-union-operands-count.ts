@@ -31,7 +31,7 @@ for (const dataSourceName of (await readdir(path.join(PROJECT_DIR, "data_sources
         }
     }
 
-    totalQueryCount += queryStrings.length;
+    totalQueryCount += queries.size;
 
     const unionOperandsCount = Array.from(queries.values())
         .map(querySGrp => {

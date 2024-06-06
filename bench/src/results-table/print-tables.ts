@@ -56,7 +56,7 @@ function createTable(stdDevs: boolean, benchName: BenchmarkName, qLogs: QueriesL
             { name: Row.CHECK_EXISTING_VIEW, unit: "ms" },
             { name: Row.REWRITING, unit: "ms" },
         ] as const,
-        stdDevs ? "0.85" : "",
+        stdDevs ? "0.75" : "0.90",
     );
 
     for (const [queryName, log_] of Object.entries(qLogs)) {

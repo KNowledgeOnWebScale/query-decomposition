@@ -104,4 +104,12 @@ export function objectFromEntries<const T extends readonly (readonly [PropertyKe
     entries: T,
 ): { [K in T[number] as K[0]]: K[1] } {
     return Object.fromEntries(entries) as { [K in T[number] as K[0]]: K[1] };
-} // https://stackoverflow.com/a/76176570
+} // https://stackoverflow.com/questions/69019873/how-can-i-get-typed-object-entries-and-object-fromentries-in-typescript/76176570#76176570
+
+export function toFixedS(n: number, decimalPlaces: number): string {
+    let s = n.toFixed(decimalPlaces);
+    if (s.match(/\./)) {
+        s = s.replace(/\.?0+$/, "");
+    }
+    return s;
+} // https://stackoverflow.com/questions/3612744/remove-insignificant-trailing-zeros-from-a-number#answer-20439411

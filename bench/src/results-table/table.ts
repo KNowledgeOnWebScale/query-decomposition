@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 
 import { areOrderedEqual } from "rewrite-sparql-unions-to-top/tests/utils/index.js";
 
+import { toFixedS } from "../utils.js";
+
 import type { BenchmarkName } from "../index.js";
 import type { Entries } from "type-fest";
 import type { ObjectEntries } from "type-fest/source/entries.js";
-
-const decimalPlaces = 2;
 
 type QueryName = string;
 
@@ -29,6 +29,7 @@ export class Table<RowHeaders extends { name: string; unit: Unit | null }[]> {
 
     private readonly rowHeaderSToIdx;
     private readonly rowHeaderSToUnit;
+    private readonly toFixedS;
 
     rows: {
         [K in QueryName]: {
@@ -43,11 +44,13 @@ export class Table<RowHeaders extends { name: string; unit: Unit | null }[]> {
         benchName: BenchmarkName,
         readonly rowHeaders: RowHeaders,
         private readonly textWidth?: string,
+        private readonly decimalPlaces = 2,
     ) {
         this.title = BenchmarkDisplayNames[benchName];
         this.rowHeaderSToIdx = new Map(rowHeaders.map((x, i) => [x.name, i]));
         this.rowHeaderSToUnit = new Map(rowHeaders.map(x => [x.name, x.unit]));
         this.rows = {};
+        this.toFixedS = (n: number | null) => (n !== null ? toFixedS(n, this.decimalPlaces) : n);
     }
 
     toLaTeX(): string {
@@ -93,11 +96,7 @@ export class Table<RowHeaders extends { name: string; unit: Unit | null }[]> {
                             rowHeaderS + " (" + this.rowHeaderSToUnit.get(rowHeaderS)! + ")";
                     }
                     rowGroups.at(-1)![rowIdx]![colIdx] =
-                        "\\(\\sfrac{" +
-                        (v5.fQM?.toFixed(decimalPlaces) ?? "-") +
-                        "}{" +
-                        (v5.dQM?.toFixed(decimalPlaces) ?? "-") +
-                        "}\\)";
+                        "\\(\\sfrac{" + (this.toFixedS(v5.fQM) ?? "-") + "}{" + (this.toFixedS(v5.dQM) ?? "-") + "}\\)";
                 }
             }
         }

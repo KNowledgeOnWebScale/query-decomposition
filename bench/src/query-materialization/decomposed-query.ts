@@ -42,9 +42,6 @@ export class DQMaterialization {
 
         start = performance.now();
 
-        const t1 = algebraToSparql(query);
-        assert(t1 === algebraToSparql(query));
-
         const queryRT = QueryTree.translate(queryS);
         assert(queryRT.type === QueryTree.types.PROJECT);
         addTimingB(timings, DQMTimingK.TRANSLATE_TO_REWRITE_TREE, start);
