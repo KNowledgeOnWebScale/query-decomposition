@@ -41,10 +41,6 @@ export async function getContentsOfFilesInDir(
 
 export function roughSizeOf(a: unknown): number {
     return sizeof(a);
-
-    // const s = JSON.stringify(a).replace(/[\[\],"]/g, ""); //stringify and remove all "stringification" extra data
-
-    // return new Blob([s]).size; // size of utf-8 string in bytes
 }
 
 export type KeysOfUnion<T> = T extends T ? keyof T : never;
