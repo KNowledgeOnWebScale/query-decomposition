@@ -21,7 +21,7 @@ const totals = (await getContentsOfFilesInDir(path.join(PROJECT_DIR, "results"))
                 const rewriteTime =
                     dQMTimings[DQMTimingK.REWRITE_TREE]!.ms +
                     dQMTimings[DQMTimingK.TRANSLATE_TO_REWRITE_TREE]!.ms +
-                    dQMTimings[DQMTimingK.TRANSLATE_TO_REWRITE_TREE]!.ms;
+                    dQMTimings[DQMTimingK.TRANSLATE_FROM_REWRITE_TREE_TO_TREE]!.ms;
                 const rewriteAndDecomposeTime = rewriteTime + dQMTimings[DQMTimingK.DECOMPOSE_TREE]!.ms;
                 const totalTime = dQMTimings[TotalTimingK.TOTAL];
                 console.log(`${benchName} > ${queryName}: ${rewriteAndDecomposeTime} / ${totalTime}`);
